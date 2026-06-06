@@ -11,6 +11,7 @@
 #pragma once
 
 #include "cpp_json/core/error.hpp"
+#include "models/pair.hpp"
 #include "models/storage.hpp"
 #include "models/token.hpp"
 #include <expected>
@@ -27,14 +28,15 @@ class Parser {
     using JsonValue = models::JsonValue;
     using JsonMember = models::JsonMember;
     using Raw = std::span<const Token>;
+	using Resources = models::Pair<Raw, models::Hint<Token>>;
     using Expected = std::expected<Storage, Error>;
 
-    Parser(Raw tokens) noexcept;
+    Parser(Resources resources) noexcept;
 
     [[nodiscard]] Expected result() const noexcept;
     [[nodiscard]] bool has_error() const noexcept;
 
-    [[nodiscard]] static Expected Parse(Parser::Raw tokens) noexcept;
+    [[nodiscard]] static Expected Parse(Resources resources) noexcept;
 
   private:
     Raw raw_;

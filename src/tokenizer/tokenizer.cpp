@@ -13,7 +13,7 @@
 
 namespace zuu::tokenizer {
 
-Tokenizer::Tokenizer(std::span<const char> json_content) noexcept : raw_(json_content) {
+Tokenizer::Tokenizer(std::span<const char> json_content) noexcept : raw_(json_content), hint_{} {
     res_.reserve(json_content.size() / 4);
     tokenize();
 }
@@ -22,7 +22,7 @@ Tokenizer::Expected Tokenizer::result() noexcept {
     if (is_error()) {
         return std::unexpected{status_};
     }
-    return res_;
+    return Resources(std::move(res_), hint_);
 }
 
 Tokenizer::Expected Tokenizer::Tokenize(Tokenizer::Raw json_content) noexcept {
@@ -188,6 +188,7 @@ void Tokenizer::tokenize() noexcept {
         switch (c) {
             case '{': {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
+				hint_.object_count++;
                 advance();
                 continue;
             }
@@ -198,6 +199,7 @@ void Tokenizer::tokenize() noexcept {
             }
             case '[': {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
+				hint_.array_count++;
                 advance();
                 continue;
             }
@@ -208,6 +210,7 @@ void Tokenizer::tokenize() noexcept {
             }
             case ':': {
                 res_.emplace_back(Token::Type::Colon);
+				hint_.key_count++;
                 advance();
                 continue;
             }
@@ -220,6 +223,7 @@ void Tokenizer::tokenize() noexcept {
                 readString();
                 if (is_error())
                     return;
+				hint_.string_count++;
                 continue;
             }
             case '\'': {

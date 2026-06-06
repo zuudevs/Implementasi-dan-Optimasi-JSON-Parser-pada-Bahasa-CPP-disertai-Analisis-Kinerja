@@ -13,8 +13,9 @@
 
 namespace zuu::parser {
 
-Parser::Parser(Parser::Raw tokens) noexcept : raw_(tokens) {
-    res_ = Storage(getStringCount(), getArrayCount(), getObjectCount());
+Parser::Parser(Resources resources) noexcept
+ : raw_(resources.first)
+ , res_(resources.second) {
     parse();
 }
 
@@ -29,8 +30,8 @@ bool Parser::has_error() const noexcept {
     return status_ != Error::None;
 }
 
-Parser::Expected Parser::Parse(Parser::Raw tokens) noexcept {
-    return Parser(tokens).result();
+Parser::Expected Parser::Parse(Resources resources) noexcept {
+    return Parser(resources).result();
 }
 
 size_t Parser::getStringCount() const noexcept {
