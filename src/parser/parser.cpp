@@ -19,11 +19,11 @@ Parser::Parser(Resources resources) noexcept
     parse();
 }
 
-Parser::Expected Parser::result() const noexcept {
+Parser::Expected Parser::result() noexcept {
     if (has_error()) {
         return std::unexpected{status_};
     }
-    return res_;
+    return std::move(res_);
 }
 
 bool Parser::has_error() const noexcept {

@@ -25,6 +25,10 @@ class Storage {
     using JsonObject = std::vector<JsonMember>;
 
     Storage() noexcept = default;
+    Storage(const Storage&) noexcept = default;
+    Storage(Storage&&) noexcept = default;
+	Storage& operator=(const Storage&) noexcept = default;
+    Storage& operator=(Storage&&) noexcept = default;
     Storage(models::Hint<Token> hint) noexcept;
 
     [[nodiscard]] bool hasRoot() const noexcept;
