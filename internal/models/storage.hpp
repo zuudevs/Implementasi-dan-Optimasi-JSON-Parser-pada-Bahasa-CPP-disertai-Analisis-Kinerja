@@ -29,6 +29,7 @@ class Storage {
     Storage(Storage&&) noexcept = default;
 	Storage& operator=(const Storage&) noexcept = default;
     Storage& operator=(Storage&&) noexcept = default;
+	~Storage() noexcept = default;
     Storage(models::Hint<Token> hint) noexcept;
 
     [[nodiscard]] bool hasRoot() const noexcept;
