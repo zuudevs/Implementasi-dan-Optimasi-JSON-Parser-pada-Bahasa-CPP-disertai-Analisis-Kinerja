@@ -17,7 +17,7 @@ namespace zuu::tokenizer {
 Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
  : current_(json_content.data())
  , end_(json_content.data() + json_content.size()) {
-    res_.reserve(json_content.size() / 4);
+    res_.reserve(json_content.size() / 3 + 4);
     tokenize();
 }
 
@@ -37,96 +37,105 @@ bool Tokenizer::is_error() const noexcept {
     return status_ != Error::None;
 }
 
-void Tokenizer::skip_whitespace() noexcept {
-    while (current_ < end_ && utils::is_whitespace(*current_)) {
-        current_++;
-    }
-}
-
 void Tokenizer::readString() noexcept {
-    auto begin = ++current_;
+	const char* begin = ++current_;
 
     while (current_ < end_) {
-        if (*current_ == '\\') {
-            current_++;
-            if (current_ < end_) {
-                current_++;
-            }
-            continue;
+        const char* next_quote = static_cast<const char*>(memchr(
+			current_, 
+			'"', 
+			static_cast<size_t>(end_ - current_)
+		));
+
+        if (!next_quote) [[unlikely]] {
+            status_ = core::JsonError::InvalidValue;
+            return;
         }
-        if (*current_ == '\"') {
-            break;
+
+        const char* next_bs = static_cast<const char*>(memchr(
+			current_, 
+			'\\', 
+			static_cast<size_t>(next_quote - current_)
+		));
+
+        if (!next_bs) [[likely]] {
+            res_.emplace_back(
+				Token::Type::String,
+                std::string_view(begin, next_quote - begin)
+			);
+            current_ = next_quote + 1;
+            return;
         }
-        current_++;
+
+        current_ = next_bs + 2;
+        if (current_ > end_) [[unlikely]] {
+            status_ = core::JsonError::InvalidValue;
+            return;
+        }
     }
 
-    if (current_ >= end_ || *current_ != '\"') {
-        status_ = Error::InvalidValue;
-        return;
-    }
-
-    res_.emplace_back(Token::Type::String, std::string_view(begin, current_ - begin));
-    current_++;
+    status_ = core::JsonError::InvalidValue;
 }
 
 void Tokenizer::readNumeric() noexcept {
-    auto begin = current_;
-    auto type = Token::Type::Integer;
+    const char* begin = current_;
+	auto type = Token::Type::Integer;
 
-    if (current_ < end_ && *current_ == '-') {
-        current_++;
-    }
+	if (current_ < end_ && *current_ == '-') {
+		++current_;
+	}
 
-    if (current_ < end_ && *current_ == '0') {
-        current_++;
-        if (current_ < end_ && utils::is_numeric(*current_)) {
-            status_ = Error::LeadingZero;
-            return;
-        }
-    } else if (current_ < end_ && utils::is_numeric(*current_)) {
-        while (current_ < end_ && utils::is_numeric(*current_)) {
-            current_++;
-        }
-    } else {
-        status_ = Error::InvalidValue;
-        return;
-    }
+	if (current_ < end_ && *current_ == '0') {
+		++current_;
+		if (current_ < end_ && utils::is_numeric(*current_)) {
+			status_ = core::JsonError::LeadingZero;
+			return;
+		}
+	} else if (current_ < end_ && utils::is_numeric(*current_)) {
+		while (current_ < end_ && utils::is_numeric(*current_)) {
+			++current_;
+		}
+	} else {
+		status_ = core::JsonError::InvalidValue;
+		return;
+	}
 
-    if (current_ < end_ && *current_ == '.') {
-        type = Token::Type::Double;
-        current_++;
+	if (current_ < end_ && *current_ == '.') {
+		type = Token::Type::Double;
+		++current_;
+		if (current_ >= end_ || !utils::is_numeric(*current_)) {
+			status_ = core::JsonError::InvalidValue;
+			return;
+		}
+		
+		while (current_ < end_ && utils::is_numeric(*current_)) {
+			++current_;
+		}
+	}
 
-        if (current_ >= end_ || !utils::is_numeric(*current_)) {
-            status_ = Error::InvalidValue;
-            return;
-        }
+	if (current_ < end_ && (*current_ == 'e' || *current_ == 'E')) {
+		type = Token::Type::Double;
+		++current_;
+		if (current_ < end_ && (*current_ == '+' || *current_ == '-')) {
+			++current_;
+		}
 
-        while (current_ < end_ && utils::is_numeric(*current_)) {
-            current_++;
-        }
-    }
+		if (current_ >= end_ || !utils::is_numeric(*current_)) {
+			status_ = core::JsonError::InvalidValue;
+			return;
+		}
 
-    if (current_ < end_ && (*current_ == 'e' || *current_ == 'E')) {
-        type = Token::Type::Double;
-        current_++;
+		while (current_ < end_ && utils::is_numeric(*current_)) {
+			++current_;
+		}
+	}
 
-        if (current_ < end_ && (*current_ == '+' || *current_ == '-')) {
-            current_++;
-        }
-
-        if (current_ >= end_ || !utils::is_numeric(*current_)) {
-            status_ = Error::InvalidValue;
-            return;
-        }
-
-        while (current_ < end_ && utils::is_numeric(*current_)) {
-            current_++;
-        }
-    }
-
-    if (!is_error()) {
-        res_.emplace_back(type, std::string_view(begin, current_ - begin));
-    }
+	if (!is_error()) {
+		res_.emplace_back(
+			type, 
+			std::string_view(begin, current_ - begin)
+		);
+	}
 }
 
 void Tokenizer::readAlphabet() noexcept {
@@ -171,17 +180,23 @@ void Tokenizer::readAlphabet() noexcept {
 		return;
 	}
 
-	res_.emplace_back(type, std::string_view(current_, end_lit - current_));
+	res_.emplace_back(
+		type, 
+		std::string_view(current_, end_lit - current_)
+	);
+
 	current_ = end_lit;
 }
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-        skip_whitespace();
+        while (current_ < end_ && utils::is_whitespace(*current_)) {
+			++current_;
+		}
 
-        if (current_ >= end_) {
-            break;
-        }
+		if (current_ >= end_) {
+			break;
+		}
 
         switch (*current_) {
             case '{': {
@@ -208,19 +223,21 @@ void Tokenizer::tokenize() noexcept {
             }
             case ':': {
                 res_.emplace_back(Token::Type::Colon);
-				hint_.key_count++;
                 current_++;
                 continue;
             }
             case ',': {
                 res_.emplace_back(Token::Type::Comma);
+				hint_.comma_count++;
                 current_++;
                 continue;
             }
             case '\"': {
                 readString();
-                if (is_error())
+                if (is_error()) {
                     return;
+				}
+
 				hint_.string_count++;
                 continue;
             }
@@ -230,20 +247,22 @@ void Tokenizer::tokenize() noexcept {
             }
             default: {
                 if (utils::is_numeric(*current_) || *current_ == '-') {
-                    readNumeric();
-                } else if (utils::is_alphabet(*current_)) {
-                    readAlphabet();
-                } else {
-                    status_ = Error::Unknown;
-                    return;
-                }
+					readNumeric();
+				} else if (utils::is_alphabet(*current_)) {
+					readAlphabet();
+				} else {
+					status_ = core::JsonError::Unknown;
+					return;
+				}
 
-                if (is_error()) {
-                    return;
-                }
+				if (is_error()) {
+					return;
+				}
             }
         }
     }
+
+	res_.emplace_back(Token::Type::EndOfFile);
 }
 
 } // namespace zuu::tokenizer

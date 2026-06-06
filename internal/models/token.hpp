@@ -43,6 +43,7 @@ class Token {
         Integer,
         Double,
         String,
+		EndOfFile,
         Unknown,
     };
 
@@ -61,7 +62,7 @@ struct Hint<Token> {
 	size_t string_count{0};
 	size_t array_count{0};
 	size_t object_count{0};
-	size_t key_count{0};
+	size_t comma_count{0};
 };
 
 } // namespace models

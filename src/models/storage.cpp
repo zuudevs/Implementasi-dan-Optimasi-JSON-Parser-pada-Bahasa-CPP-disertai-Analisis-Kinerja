@@ -16,6 +16,9 @@ Storage::Storage(models::Hint<Token> hint) noexcept {
     strings_.reserve(hint.string_count);
     arrays_.reserve(hint.array_count);
     objects_.reserve(hint.object_count);
+    const size_t elem_hint = hint.comma_count + hint.array_count + hint.object_count;
+    array_elements_.reserve(elem_hint);
+    object_elements_.reserve(elem_hint);
 }
 
 bool Storage::hasRoot() const noexcept {
@@ -31,38 +34,38 @@ const JsonValue& Storage::root() const noexcept {
     return root_;
 }
 
-size_t Storage::addString(std::string_view value) noexcept {
-    strings_.emplace_back(value);
-    return strings_.size() - 1;
+size_t Storage::commitString(std::string_view value) noexcept {
+    strings_.push_back(value);
+	return strings_.size() - 1;
 }
 
-size_t Storage::addArray() noexcept {
-    arrays_.emplace_back();
-    return arrays_.size() - 1;
+size_t Storage::commitArray(std::span<const JsonValue> elements) noexcept {
+    const auto offset = static_cast<uint32_t>(array_elements_.size());
+	const auto size   = static_cast<uint32_t>(elements.size());
+	array_elements_.insert(array_elements_.end(), elements.begin(), elements.end());
+	arrays_.emplace_back(offset, size);
+	return arrays_.size() - 1;
 }
 
-size_t Storage::addObject() noexcept {
-    objects_.emplace_back();
-    return objects_.size() - 1;
+size_t Storage::commitObject(std::span<const JsonMember> members) noexcept {
+    const auto offset = static_cast<uint32_t>(object_elements_.size());
+	const auto size = static_cast<uint32_t>(members.size());
+	object_elements_.insert(object_elements_.end(), members.begin(), members.end());
+	objects_.emplace_back(offset, size);
+	return objects_.size() - 1;
 }
 
-Storage::JsonArray& Storage::array(size_t index) noexcept {
-    return arrays_[index];
+Storage::JsonArray Storage::array(size_t index) const noexcept {
+    const auto& [offset, size] = arrays_[index];
+	return {array_elements_.data() + offset, size };
 }
 
-const Storage::JsonArray& Storage::array(size_t index) const noexcept {
-    return arrays_[index];
+Storage::JsonObject Storage::object(size_t index) const noexcept {
+    const auto& [offset, size] = objects_[index];
+	return { object_elements_.data() + offset, size };
 }
 
-Storage::JsonObject& Storage::object(size_t index) noexcept {
-    return objects_[index];
-}
-
-const Storage::JsonObject& Storage::object(size_t index) const noexcept {
-    return objects_[index];
-}
-
-const std::string& Storage::string(size_t index) const noexcept {
+std::string_view Storage::string(size_t index) const noexcept {
     return strings_[index];
 }
 

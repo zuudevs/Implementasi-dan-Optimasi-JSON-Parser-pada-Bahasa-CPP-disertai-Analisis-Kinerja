@@ -12,7 +12,7 @@
 
 #include "models/json_member.hpp"
 #include "models/token.hpp"
-#include <string>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -21,8 +21,8 @@ namespace zuu::models {
 class Storage {
   public:
     using Type = JsonValue::Type;
-    using JsonArray = std::vector<JsonValue>;
-    using JsonObject = std::vector<JsonMember>;
+    using JsonArray = std::span<const JsonValue>;
+    using JsonObject = std::span<const JsonMember>;
 
     Storage() noexcept = default;
     Storage(const Storage&) noexcept = default;
@@ -36,20 +36,20 @@ class Storage {
     void setRoot(JsonValue value) noexcept;
     [[nodiscard]] const JsonValue& root() const noexcept;
 
-    [[nodiscard]] size_t addString(std::string_view value) noexcept;
-    [[nodiscard]] size_t addArray() noexcept;
-    [[nodiscard]] size_t addObject() noexcept;
+    [[nodiscard]] size_t commitString(std::string_view value) noexcept;
+    [[nodiscard]] size_t commitArray(std::span<const JsonValue> elements) noexcept;
+    [[nodiscard]] size_t commitObject(std::span<const JsonMember> members) noexcept;
 
-    [[nodiscard]] JsonArray& array(size_t index) noexcept;
-    [[nodiscard]] const JsonArray& array(size_t index) const noexcept;
-    [[nodiscard]] JsonObject& object(size_t index) noexcept;
-    [[nodiscard]] const JsonObject& object(size_t index) const noexcept;
-    [[nodiscard]] const std::string& string(size_t index) const noexcept;
+    [[nodiscard]] JsonArray array(size_t index) const noexcept;
+    [[nodiscard]] JsonObject object(size_t index) const noexcept;
+    [[nodiscard]] std::string_view string(size_t index) const noexcept;
 
   private:
-    std::vector<std::string> strings_;
-    std::vector<JsonObject> objects_;
-    std::vector<JsonArray> arrays_;
+	std::vector<std::string_view> strings_;
+	std::vector<JsonValue> array_elements_;
+	std::vector<std::pair<uint32_t, uint32_t>> arrays_;
+	std::vector<JsonMember> object_elements_;
+	std::vector<std::pair<uint32_t, uint32_t>> objects_;
     JsonValue root_;
     bool root_set_{false};
 };

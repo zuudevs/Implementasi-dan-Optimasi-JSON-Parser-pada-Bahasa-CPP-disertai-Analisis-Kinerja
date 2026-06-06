@@ -52,7 +52,6 @@ class JsonValue {
     ScalarStorage data_;
     Type type_;
 
-  private:
     constexpr JsonValue(bool value) noexcept : data_(value), type_(Type::Boolean) {}
     constexpr JsonValue(long long value) noexcept : data_(value), type_(Type::Integer) {}
     constexpr JsonValue(long double value) noexcept : data_(value), type_(Type::Double) {}
