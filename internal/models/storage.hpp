@@ -30,7 +30,7 @@ class Storage {
     Storage& operator=(const Storage&) noexcept = default;
     Storage& operator=(Storage&&) noexcept = default;
 	~Storage() noexcept = default;
-    Storage(models::Hint<Token>) noexcept;
+    Storage(models::Hint<Token> hint) noexcept;
 
     [[nodiscard]] bool hasRoot() const noexcept;
     void setRoot(JsonValue value) noexcept;
