@@ -8,12 +8,15 @@
  * @copyright Copyright (c) 2026
  */
 
+#include "constants/literal.hpp"
 #include "tokenizer/tokenizer.hpp"
 #include "utils/strings.hpp"
 
 namespace zuu::tokenizer {
 
-Tokenizer::Tokenizer(std::span<const char> json_content) noexcept : raw_(json_content) {
+Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
+ : current_(json_content.data())
+ , end_(json_content.data() + json_content.size()) {
     res_.reserve(json_content.size() / 4);
     tokenize();
 }
@@ -34,119 +37,113 @@ bool Tokenizer::is_error() const noexcept {
     return status_ != Error::None;
 }
 
-void Tokenizer::advance() noexcept {
-    idx_++;
-}
-
 void Tokenizer::skip_whitespace() noexcept {
-    while (idx_ < raw_.size() && utils::is_whitespace(raw_[idx_])) {
-        advance();
+    while (current_ < end_ && utils::is_whitespace(*current_)) {
+        current_++;
     }
 }
 
 void Tokenizer::readString() noexcept {
-    advance();
-    size_t start = idx_;
+    auto begin = ++current_;
 
-    while (idx_ < raw_.size()) {
-        if (raw_[idx_] == '\\') {
-            advance();
-            if (idx_ < raw_.size()) {
-                advance();
+    while (current_ < end_) {
+        if (*current_ == '\\') {
+            current_++;
+            if (current_ < end_) {
+                current_++;
             }
             continue;
         }
-        if (raw_[idx_] == '\"') {
+        if (*current_ == '\"') {
             break;
         }
-        advance();
+        current_++;
     }
 
-    if (idx_ >= raw_.size() || raw_[idx_] != '\"') {
+    if (current_ >= end_ || *current_ != '\"') {
         status_ = Error::InvalidValue;
         return;
     }
 
-    res_.emplace_back(Token::Type::String, std::string_view(raw_.data() + start, idx_ - start));
-
-    advance();
+    res_.emplace_back(Token::Type::String, std::string_view(begin, end_ - begin));
+    current_++;
 }
 
 void Tokenizer::readNumeric() noexcept {
-    size_t start = idx_;
+    auto begin = ++current_;
     auto type = Token::Type::Integer;
 
-    if (idx_ < raw_.size() && raw_[idx_] == '-') {
-        advance();
+    if (current_ < end_ && *current_ == '-') {
+        current_++;
     }
 
-    if (idx_ < raw_.size() && raw_[idx_] == '0') {
-        advance();
-        if (idx_ < raw_.size() && utils::is_numeric(raw_[idx_])) {
+    if (current_ < end_ && *current_ == '0') {
+        current_++;
+        if (current_ < end_ && utils::is_numeric(*current_)) {
             status_ = Error::LeadingZero;
             return;
         }
-    } else if (idx_ < raw_.size() && utils::is_numeric(raw_[idx_])) {
-        while (idx_ < raw_.size() && utils::is_numeric(raw_[idx_])) {
-            advance();
+    } else if (current_ < end_ && utils::is_numeric(*current_)) {
+        while (current_ < end_ && utils::is_numeric(*current_)) {
+            current_++;
         }
     } else {
         status_ = Error::InvalidValue;
         return;
     }
 
-    if (idx_ < raw_.size() && raw_[idx_] == '.') {
+    if (current_ < end_ && *current_ == '.') {
         type = Token::Type::Double;
-        advance();
+        current_++;
 
-        if (idx_ >= raw_.size() || !utils::is_numeric(raw_[idx_])) {
+        if (current_ >= end_ || !utils::is_numeric(*current_)) {
             status_ = Error::InvalidValue;
             return;
         }
 
-        while (idx_ < raw_.size() && utils::is_numeric(raw_[idx_])) {
-            advance();
+        while (current_ < end_ && utils::is_numeric(*current_)) {
+            current_++;
         }
     }
 
-    if (idx_ < raw_.size() && (raw_[idx_] == 'e' || raw_[idx_] == 'E')) {
+    if (current_ < end_ && (*current_ == 'e' || *current_ == 'E')) {
         type = Token::Type::Double;
-        advance();
+        current_++;
 
-        if (idx_ < raw_.size() && (raw_[idx_] == '+' || raw_[idx_] == '-')) {
-            advance();
+        if (current_ < end_ && (*current_ == '+' || *current_ == '-')) {
+            current_++;
         }
 
-        if (idx_ >= raw_.size() || !utils::is_numeric(raw_[idx_])) {
+        if (current_ >= end_ || !utils::is_numeric(*current_)) {
             status_ = Error::InvalidValue;
             return;
         }
 
-        while (idx_ < raw_.size() && utils::is_numeric(raw_[idx_])) {
-            advance();
+        while (current_ < end_ && utils::is_numeric(*current_)) {
+            current_++;
         }
     }
 
     if (!is_error()) {
-        res_.emplace_back(type, std::string_view(raw_.data() + start, idx_ - start));
+        res_.emplace_back(type, std::string_view(begin, end_ - begin));
     }
 }
 
 void Tokenizer::readAlphabet() noexcept {
-    std::string_view keyword;
+    unsigned char keyword_idx{0};
     Token::Type type{};
 
-    switch (raw_[idx_]) {
+    switch (*current_) {
         case 'n':
-            keyword = "null";
+            keyword_idx = 0;
             type = Token::Type::Null;
             break;
         case 't':
-            keyword = "true";
+            keyword_idx = 1;
             type = Token::Type::Boolean;
             break;
         case 'f':
-            keyword = "false";
+            keyword_idx = 2;
             type = Token::Type::Boolean;
             break;
         default:
@@ -154,66 +151,67 @@ void Tokenizer::readAlphabet() noexcept {
             return;
     }
 
-    if (idx_ + keyword.size() > raw_.size()) {
+    if (current_ + constants::JSON_LIT_SIZE[keyword_idx] > end_) {
         status_ = Error::InvalidValue;
         return;
     }
 
-    if (std::string_view(raw_.data() + idx_, keyword.size()) != keyword) {
-        status_ = Error::InvalidValue;
-        return;
-    }
+    if (!std::equal(
+		constants::JSON_LIT[keyword_idx],
+		constants::JSON_LIT[keyword_idx] + constants::JSON_LIT_SIZE[keyword_idx],
+		current_
+	)) {
+		status_ = core::JsonError::InvalidValue;
+		return;
+	}
 
-    size_t end = idx_ + keyword.size();
-    if (end < raw_.size() && (utils::is_alphabet(raw_[end]) || utils::is_numeric(raw_[end]))) {
-        status_ = Error::InvalidValue;
-        return;
-    }
+	auto end_lit = current_ + constants::JSON_LIT_SIZE[keyword_idx];
+	if (end_lit < end_ && (utils::is_alphabet(*end_lit) || utils::is_numeric(*end_lit))) {
+		status_ = core::JsonError::InvalidValue;
+		return;
+	}
 
-    res_.emplace_back(type, std::string_view(raw_.data() + idx_, keyword.size()));
-
-    idx_ = end;
+	res_.emplace_back(type, std::string_view(current_, end_lit - current_));
+	current_ = end_lit;
 }
 
 void Tokenizer::tokenize() noexcept {
-    while (idx_ < raw_.size()) {
+    while (current_ < end_) {
         skip_whitespace();
 
-        if (idx_ >= raw_.size()) {
+        if (current_ >= end_) {
             break;
         }
 
-        char c = raw_[idx_];
-
-        switch (c) {
+        switch (*current_) {
             case '{': {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
-                advance();
+                current_++;
                 continue;
             }
             case '}': {
                 res_.emplace_back(Token::Type::RightCurlyBracket);
-                advance();
+                current_++;
                 continue;
             }
             case '[': {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
-                advance();
+                current_++;
                 continue;
             }
             case ']': {
                 res_.emplace_back(Token::Type::RightSquareBracket);
-                advance();
+                current_++;
                 continue;
             }
             case ':': {
                 res_.emplace_back(Token::Type::Colon);
-                advance();
+                current_++;
                 continue;
             }
             case ',': {
                 res_.emplace_back(Token::Type::Comma);
-                advance();
+                current_++;
                 continue;
             }
             case '\"': {
@@ -227,9 +225,9 @@ void Tokenizer::tokenize() noexcept {
                 return;
             }
             default: {
-                if (utils::is_numeric(c) || c == '-') {
+                if (utils::is_numeric(*current_) || *current_ == '-') {
                     readNumeric();
-                } else if (utils::is_alphabet(c)) {
+                } else if (utils::is_alphabet(*current_)) {
                     readAlphabet();
                 } else {
                     status_ = Error::Unknown;

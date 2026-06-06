@@ -33,12 +33,11 @@ class Tokenizer {
 
   private:
     Result res_;
-    Raw raw_;
-    size_t idx_{0};
+    const char* current_;
+    const char* end_;
     Error status_{Error::None};
 
     [[nodiscard]] bool is_error() const noexcept;
-    void advance() noexcept;
     void skip_whitespace() noexcept;
     void readString() noexcept;
     void readNumeric() noexcept;

@@ -37,8 +37,8 @@ class Parser {
     [[nodiscard]] static Expected Parse(Parser::Raw tokens) noexcept;
 
   private:
-    Raw raw_;
     Storage res_;
+	Raw raw_;
     size_t idx_{};
     Error status_{core::JsonError::None};
 
