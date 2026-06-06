@@ -23,12 +23,12 @@ Json::~Json() noexcept = default;
 Json::Result<Json> Json::parse(std::string_view content) noexcept {
     const auto raw = std::span<const char>(content.data(), content.size());
 
-    auto tokens = tokenizer::Tokenizer::Tokenize(raw);
-    if (!tokens) {
-        return std::unexpected{tokens.error()};
+    auto result = tokenizer::Tokenizer::Tokenize(raw);
+    if (!result) {
+        return std::unexpected{result.error()};
     }
 
-    parser::Parser parser(tokens.value());
+    parser::Parser parser(result.value());
     auto parsed = parser.result();
     if (!parsed) {
         return std::unexpected{parsed.error()};

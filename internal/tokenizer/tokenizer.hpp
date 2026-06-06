@@ -11,7 +11,6 @@
 #pragma once
 
 #include "cpp_json/core/error.hpp"
-#include "models/pair.hpp"
 #include "models/token.hpp"
 #include <expected>
 #include <span>
@@ -25,7 +24,7 @@ class Tokenizer {
     using Error = core::JsonError;
     using Result = std::vector<Token>;
 	using Hint = models::Hint<Token>;
-	using Resources = models::Pair<Result, Hint>;
+	using Resources = std::pair<Result, Hint>;
     using Expected = std::expected<Resources, Error>;
     using Raw = std::span<const char>;
 
