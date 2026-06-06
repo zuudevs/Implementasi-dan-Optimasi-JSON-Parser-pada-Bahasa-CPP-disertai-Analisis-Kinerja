@@ -25,7 +25,7 @@ Tokenizer::Expected Tokenizer::result() noexcept {
     if (is_error()) {
         return std::unexpected{status_};
     }
-    return res_;
+    return std::pair{std::move(res_), hint_};
 }
 
 Tokenizer::Expected Tokenizer::Tokenize(Tokenizer::Raw json_content) noexcept {
@@ -65,12 +65,12 @@ void Tokenizer::readString() noexcept {
         return;
     }
 
-    res_.emplace_back(Token::Type::String, std::string_view(begin, end_ - begin));
+    res_.emplace_back(Token::Type::String, std::string_view(begin, current_ - begin));
     current_++;
 }
 
 void Tokenizer::readNumeric() noexcept {
-    auto begin = ++current_;
+    auto begin = current_;
     auto type = Token::Type::Integer;
 
     if (current_ < end_ && *current_ == '-') {
@@ -125,7 +125,7 @@ void Tokenizer::readNumeric() noexcept {
     }
 
     if (!is_error()) {
-        res_.emplace_back(type, std::string_view(begin, end_ - begin));
+        res_.emplace_back(type, std::string_view(begin, current_ - begin));
     }
 }
 
@@ -186,6 +186,7 @@ void Tokenizer::tokenize() noexcept {
         switch (*current_) {
             case '{': {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
+				hint_.object_count++;
                 current_++;
                 continue;
             }
@@ -196,6 +197,7 @@ void Tokenizer::tokenize() noexcept {
             }
             case '[': {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
+				hint_.array_count++;
                 current_++;
                 continue;
             }
@@ -206,6 +208,7 @@ void Tokenizer::tokenize() noexcept {
             }
             case ':': {
                 res_.emplace_back(Token::Type::Colon);
+				hint_.key_count++;
                 current_++;
                 continue;
             }
@@ -218,6 +221,7 @@ void Tokenizer::tokenize() noexcept {
                 readString();
                 if (is_error())
                     return;
+				hint_.string_count++;
                 continue;
             }
             case '\'': {

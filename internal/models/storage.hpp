@@ -11,6 +11,7 @@
 #pragma once
 
 #include "models/json_member.hpp"
+#include "models/token.hpp"
 #include <string>
 #include <string_view>
 #include <vector>
@@ -23,8 +24,13 @@ class Storage {
     using JsonArray = std::vector<JsonValue>;
     using JsonObject = std::vector<JsonMember>;
 
-    Storage() = default;
-    Storage(size_t strings_cap, size_t arrays_cap, size_t objects_cap) noexcept;
+    Storage() noexcept = default;
+    Storage(const Storage&) noexcept = default;
+    Storage(Storage&&) noexcept = default;
+    Storage& operator=(const Storage&) noexcept = default;
+    Storage& operator=(Storage&&) noexcept = default;
+	~Storage() noexcept = default;
+    Storage(models::Hint<Token>) noexcept;
 
     [[nodiscard]] bool hasRoot() const noexcept;
     void setRoot(JsonValue value) noexcept;

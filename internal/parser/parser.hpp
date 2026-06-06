@@ -23,31 +23,26 @@ class Parser {
     using Token = models::Token;
     using TokenType = Token::Type;
     using Error = core::JsonError;
+	using Hint = models::Hint<Token>;
     using Storage = models::Storage;
     using JsonValue = models::JsonValue;
     using JsonMember = models::JsonMember;
     using Raw = std::span<const Token>;
+	using Resources = std::pair<Raw, Hint>;
     using Expected = std::expected<Storage, Error>;
 
-    Parser(Raw tokens) noexcept;
+    Parser(Resources resources) noexcept;
 
     [[nodiscard]] Expected result() const noexcept;
     [[nodiscard]] bool has_error() const noexcept;
 
-    [[nodiscard]] static Expected Parse(Parser::Raw tokens) noexcept;
+    [[nodiscard]] static Expected Parse(Resources resources) noexcept;
 
   private:
     Storage res_;
-	Raw raw_;
-    size_t idx_{};
+	const Token* current_;
+	const Token* end_;
     Error status_{core::JsonError::None};
-
-    [[nodiscard]] size_t getStringCount() const noexcept;
-    [[nodiscard]] size_t getArrayCount() const noexcept;
-    [[nodiscard]] size_t getObjectCount() const noexcept;
-
-    [[nodiscard]] Token::Type peek() const noexcept;
-    void advance() noexcept;
 
     [[nodiscard]] JsonValue buildNull() noexcept;
     [[nodiscard]] JsonValue buildBoolean() noexcept;
