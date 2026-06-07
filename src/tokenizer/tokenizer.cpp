@@ -9,6 +9,7 @@
  */
 
 #include "tokenizer/tokenizer.hpp"
+#include "constants/token_lut.hpp"
 #include "utils/strings.hpp"
 
 namespace zuu::tokenizer {
@@ -133,46 +134,36 @@ void Tokenizer::readNumeric() noexcept {
 }
 
 void Tokenizer::readAlphabet() noexcept {
-    std::string_view keyword;
-    Token::Type type{};
-
     switch (raw_[idx_]) {
         case 'n':
-            keyword = "null";
-            type = Token::Type::Null;
+            if (idx_ + 4 <= raw_.size() && memcmp(raw_.data() + idx_, "null", 4) == 0) {
+                res_.emplace_back(Token::Type::Null, std::string_view(raw_.data() + idx_, 4));
+
+                idx_ += 4;
+                return;
+            }
             break;
+
         case 't':
-            keyword = "true";
-            type = Token::Type::Boolean;
+            if (idx_ + 4 <= raw_.size() && memcmp(raw_.data() + idx_, "true", 4) == 0) {
+                res_.emplace_back(Token::Type::Boolean, std::string_view(raw_.data() + idx_, 4));
+
+                idx_ += 4;
+                return;
+            }
             break;
+
         case 'f':
-            keyword = "false";
-            type = Token::Type::Boolean;
+            if (idx_ + 5 <= raw_.size() && memcmp(raw_.data() + idx_, "false", 5) == 0) {
+                res_.emplace_back(Token::Type::Boolean, std::string_view(raw_.data() + idx_, 5));
+
+                idx_ += 5;
+                return;
+            }
             break;
-        default:
-            status_ = Error::InvalidValue;
-            return;
     }
 
-    if (idx_ + keyword.size() > raw_.size()) {
-        status_ = Error::InvalidValue;
-        return;
-    }
-
-    if (std::string_view(raw_.data() + idx_, keyword.size()) != keyword) {
-        status_ = Error::InvalidValue;
-        return;
-    }
-
-    size_t end = idx_ + keyword.size();
-    if (end < raw_.size() && (utils::is_alphabet(raw_[end]) || utils::is_numeric(raw_[end]))) {
-        status_ = Error::InvalidValue;
-        return;
-    }
-
-    res_.emplace_back(type, std::string_view(raw_.data() + idx_, keyword.size()));
-
-    idx_ = end;
+    status_ = Error::InvalidValue;
 }
 
 void Tokenizer::tokenize() noexcept {
@@ -183,62 +174,62 @@ void Tokenizer::tokenize() noexcept {
             break;
         }
 
-        char c = raw_[idx_];
-
-        switch (c) {
-            case '{': {
+        switch (constants::LUT_TOKEN[raw_[idx_]]) {
+            case 1: {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
                 advance();
                 continue;
             }
-            case '}': {
+            case 2: {
                 res_.emplace_back(Token::Type::RightCurlyBracket);
                 advance();
                 continue;
             }
-            case '[': {
+            case 3: {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
                 advance();
                 continue;
             }
-            case ']': {
+            case 4: {
                 res_.emplace_back(Token::Type::RightSquareBracket);
                 advance();
                 continue;
             }
-            case ':': {
+            case 5: {
                 res_.emplace_back(Token::Type::Colon);
                 advance();
                 continue;
             }
-            case ',': {
+            case 6: {
                 res_.emplace_back(Token::Type::Comma);
                 advance();
                 continue;
             }
-            case '\"': {
+            case 7: {
                 readString();
                 if (is_error())
                     return;
                 continue;
             }
-            case '\'': {
+            case 8: {
+                readNumeric();
+                if (is_error())
+                    return;
+                continue;
+            }
+            case 9: {
+                readAlphabet();
+                if (is_error())
+                    return;
+                continue;
+            }
+            case 10: {
                 status_ = Error::SingleQuotedString;
                 return;
             }
             default: {
-                if (utils::is_numeric(c) || c == '-') {
-                    readNumeric();
-                } else if (utils::is_alphabet(c)) {
-                    readAlphabet();
-                } else {
-                    status_ = Error::Unknown;
-                    return;
-                }
-
-                if (is_error()) {
-                    return;
-                }
+                status_ = Error::Unknown;
+                return;
             }
         }
     }
