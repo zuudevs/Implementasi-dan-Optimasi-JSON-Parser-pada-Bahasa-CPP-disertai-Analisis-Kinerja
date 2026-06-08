@@ -48,7 +48,7 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
         return std::unexpected{Error::IsNotObject};
     }
 
-    const auto& obj = storage_->object(root_val.data_.index);
+    const auto& obj = storage_->object(root_val.as_index());
     for (const auto& member : obj) {
         if (storage_->string(member.key_index_) == key) {
             return Value::fromInternal(storage_.get(), member.value_);

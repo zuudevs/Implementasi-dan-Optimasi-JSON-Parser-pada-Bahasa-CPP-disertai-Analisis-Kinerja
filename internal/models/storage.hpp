@@ -50,7 +50,7 @@ class Storage {
 	std::vector<std::pair<uint32_t, uint32_t>> arrays_;
 	std::vector<JsonMember> object_elements_;
 	std::vector<std::pair<uint32_t, uint32_t>> objects_;
-    JsonValue root_;
+    JsonValue root_{};
     bool root_set_{false};
 };
 
