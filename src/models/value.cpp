@@ -53,34 +53,34 @@ bool Value::is_object() const noexcept {
 Value::Result<bool> Value::as_bool() const noexcept {
     if (value_.type_ != Type::Boolean)
         return std::unexpected{core::JsonError::InvalidType};
-    return value_.data_.b;
+    return value_.as_bool();
 }
 
 Value::Result<long long> Value::as_integer() const noexcept {
     if (value_.type_ != Type::Integer)
         return std::unexpected{core::JsonError::InvalidType};
-    return value_.data_.i;
+    return value_.as_integer();
 }
 
 Value::Result<long double> Value::as_double() const noexcept {
     if (value_.type_ != Type::Double)
         return std::unexpected{core::JsonError::InvalidType};
-    return value_.data_.d;
+    return value_.as_double();
 }
 
 Value::Result<std::string_view> Value::as_string() const noexcept {
     if (value_.type_ != Type::String)
         return std::unexpected{core::JsonError::InvalidType};
-    return storage_->string(value_.data_.index);
+    return storage_->string(value_.as_index());
 }
 
 // ── Container access ──────────────────────────────────────────────────────────
 
 size_t Value::size() const noexcept {
     if (value_.type_ == Type::Array)
-        return storage_->array(value_.data_.index).size();
+        return storage_->array(value_.as_index()).size();
     if (value_.type_ == Type::Object)
-        return storage_->object(value_.data_.index).size();
+        return storage_->object(value_.as_index()).size();
     return 0;
 }
 
@@ -88,7 +88,7 @@ Value::Result<Value> Value::operator[](size_t index) const noexcept {
     if (value_.type_ != Type::Array) {
         return std::unexpected{core::JsonError::IsNotArray};
     }
-    const auto& arr = storage_->array(value_.data_.index);
+    const auto& arr = storage_->array(value_.as_index());
     if (index >= arr.size()) {
         return std::unexpected{core::JsonError::InvalidValue};
     }
@@ -99,7 +99,7 @@ Value::Result<Value> Value::operator[](std::string_view key) const noexcept {
     if (value_.type_ != Type::Object) {
         return std::unexpected{core::JsonError::IsNotObject};
     }
-    const auto& obj = storage_->object(value_.data_.index);
+    const auto& obj = storage_->object(value_.as_index());
     for (const auto& member : obj) {
         if (storage_->string(member.key_index_) == key) {
             return fromInternal(storage_, member.value_);
@@ -111,7 +111,7 @@ Value::Result<Value> Value::operator[](std::string_view key) const noexcept {
 bool Value::contains(std::string_view key) const noexcept {
     if (value_.type_ != Type::Object)
         return false;
-    const auto& obj = storage_->object(value_.data_.index);
+    const auto& obj = storage_->object(value_.as_index());
     for (const auto& member : obj) {
         if (storage_->string(member.key_index_) == key) {
             return true;
