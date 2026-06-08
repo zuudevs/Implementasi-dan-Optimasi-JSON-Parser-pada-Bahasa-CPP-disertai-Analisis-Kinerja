@@ -161,9 +161,9 @@ void Tokenizer::readAlphabet() noexcept {
                 return;
             }
             break;
+		default:
+			status_ = Error::InvalidValue;
     }
-
-    status_ = Error::InvalidValue;
 }
 
 void Tokenizer::tokenize() noexcept {
