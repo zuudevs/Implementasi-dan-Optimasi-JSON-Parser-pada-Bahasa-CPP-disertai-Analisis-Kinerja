@@ -39,12 +39,6 @@ void Tokenizer::advance() noexcept {
     idx_++;
 }
 
-void Tokenizer::skip_whitespace() noexcept {
-    while (idx_ < raw_.size() && utils::is_whitespace(raw_[idx_])) {
-        advance();
-    }
-}
-
 void Tokenizer::readString() noexcept {
     advance();
     size_t start = idx_;
@@ -168,13 +162,13 @@ void Tokenizer::readAlphabet() noexcept {
 
 void Tokenizer::tokenize() noexcept {
     while (idx_ < raw_.size()) {
-        skip_whitespace();
-
-        if (idx_ >= raw_.size()) {
-            break;
-        }
-
         switch (constants::LUT_TOKEN[raw_[idx_]]) {
+			case 0: {
+				while (idx_ < raw_.size() && utils::is_whitespace(raw_[idx_])) {
+					advance();
+				}
+				continue;
+			}
             case 1: {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
                 advance();
