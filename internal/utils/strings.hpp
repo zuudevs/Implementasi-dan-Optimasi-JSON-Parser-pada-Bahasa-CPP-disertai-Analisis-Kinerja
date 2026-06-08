@@ -12,15 +12,18 @@
 
 namespace zuu::utils {
 
-bool is_numeric(char c) {
+[[nodiscard]] inline constexpr
+bool is_numeric(char c) noexcept {
     return c >= '0' && c <= '9';
 }
 
-bool is_alphabet(char c) {
+[[nodiscard]] inline constexpr
+bool is_alphabet(char c) noexcept {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
-bool is_whitespace(char c) {
+[[nodiscard]] inline constexpr
+bool is_whitespace(char c) noexcept {
     return c == '\t' || c == '\r' || c == '\n' || c == '\f' || c == ' ';
 }
 

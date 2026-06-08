@@ -44,7 +44,7 @@ Value Json::root() const noexcept {
 Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
     const auto& root_val = storage_->root();
 
-    if (root_val.type_ != core::Type::Object) {
+    if (root_val.get_type() != core::Type::Object) {
         return std::unexpected{Error::IsNotObject};
     }
 

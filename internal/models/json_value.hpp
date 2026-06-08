@@ -33,7 +33,6 @@ struct JsonValue {
     static constexpr Data TAG_OBJECT = static_cast<Data>(Type::Object);
 
 	Data data_;
-	Type type_;
 
 	// Encoding + Factory
 	[[nodiscard]] static inline constexpr 
@@ -56,7 +55,6 @@ struct JsonValue {
     
 	[[nodiscard]] inline constexpr Type get_type() const noexcept {
         if (is_double()) return Type::Double;
-        // PATCH: Masking 0x7 memotong bit ke-51 (Quiet NaN)
         return static_cast<Type>((data_ >> TAG_SHIFT) & QUIET_NAN_MASK);
     }
     

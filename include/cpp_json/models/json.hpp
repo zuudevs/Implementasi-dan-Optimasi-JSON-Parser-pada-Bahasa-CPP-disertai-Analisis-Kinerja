@@ -45,7 +45,7 @@ class Json {
 
     [[nodiscard]] Value root() const noexcept;
 
-    Result<Value> operator[](std::string_view key) const noexcept;
+    [[nodiscard]] Result<Value> operator[](std::string_view key) const noexcept;
 
   private:
     explicit Json(std::unique_ptr<Storage> storage) noexcept;
