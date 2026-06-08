@@ -36,33 +36,33 @@ const JsonValue& Storage::root() const noexcept {
 
 size_t Storage::commitString(std::string_view value) noexcept {
     strings_.push_back(value);
-	return strings_.size() - 1;
+    return strings_.size() - 1;
 }
 
 size_t Storage::commitArray(std::span<const JsonValue> elements) noexcept {
     const auto offset = static_cast<uint32_t>(array_elements_.size());
-	const auto size   = static_cast<uint32_t>(elements.size());
-	array_elements_.insert(array_elements_.end(), elements.begin(), elements.end());
-	arrays_.emplace_back(offset, size);
-	return arrays_.size() - 1;
+    const auto size = static_cast<uint32_t>(elements.size());
+    array_elements_.insert(array_elements_.end(), elements.begin(), elements.end());
+    arrays_.emplace_back(offset, size);
+    return arrays_.size() - 1;
 }
 
 size_t Storage::commitObject(std::span<const JsonMember> members) noexcept {
     const auto offset = static_cast<uint32_t>(object_elements_.size());
-	const auto size = static_cast<uint32_t>(members.size());
-	object_elements_.insert(object_elements_.end(), members.begin(), members.end());
-	objects_.emplace_back(offset, size);
-	return objects_.size() - 1;
+    const auto size = static_cast<uint32_t>(members.size());
+    object_elements_.insert(object_elements_.end(), members.begin(), members.end());
+    objects_.emplace_back(offset, size);
+    return objects_.size() - 1;
 }
 
 Storage::JsonArray Storage::array(size_t index) const noexcept {
     const auto& [offset, size] = arrays_[index];
-	return {array_elements_.data() + offset, size };
+    return {array_elements_.data() + offset, size};
 }
 
 Storage::JsonObject Storage::object(size_t index) const noexcept {
     const auto& [offset, size] = objects_[index];
-	return { object_elements_.data() + offset, size };
+    return {object_elements_.data() + offset, size};
 }
 
 std::string_view Storage::string(size_t index) const noexcept {

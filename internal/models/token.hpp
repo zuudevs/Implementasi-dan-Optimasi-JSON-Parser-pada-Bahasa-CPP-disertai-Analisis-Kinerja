@@ -13,24 +13,9 @@
 #include "models/hint.hpp"
 #include <string_view>
 
-namespace zuu {
+namespace zuu::models {
 
-namespace tokenizer {
-
-class Tokenizer;
-
-} // namespace tokenizer
-
-namespace parser {
-
-class Parser;
-
-} // namespace parser
-
-namespace models {
-
-class Token {
-  public:
+struct Token {
     enum class Type : unsigned char {
         LeftCurlyBracket,
         RightCurlyBracket,
@@ -49,12 +34,8 @@ class Token {
 
     Token(Type type, std::string_view value = "") noexcept : value_(value), type_(type) {}
 
-  private:
     std::string_view value_;
     Type type_;
-
-    friend class tokenizer::Tokenizer;
-    friend class parser::Parser;
 };
 
 template <>
@@ -65,6 +46,4 @@ struct Hint<Token> {
 	size_t comma_count{0};
 };
 
-} // namespace models
-
-} // namespace zuu
+} // namespace zuu::models

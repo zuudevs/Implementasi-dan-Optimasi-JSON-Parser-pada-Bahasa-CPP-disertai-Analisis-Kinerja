@@ -4,7 +4,7 @@
  * @brief Brief description
  * @version 0.1.0
  * @date 2026-06-06
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 
@@ -12,7 +12,6 @@
 
 namespace zuu::models {
 
-template <typename T>
-struct Hint;
+template <typename T> struct Hint;
 
 } // namespace zuu::models

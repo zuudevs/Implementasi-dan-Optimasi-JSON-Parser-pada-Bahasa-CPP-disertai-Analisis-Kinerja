@@ -29,7 +29,7 @@ class Storage {
     Storage(Storage&&) noexcept = default;
     Storage& operator=(const Storage&) noexcept = default;
     Storage& operator=(Storage&&) noexcept = default;
-	~Storage() noexcept = default;
+    ~Storage() noexcept = default;
     Storage(models::Hint<Token> hint) noexcept;
 
     [[nodiscard]] bool hasRoot() const noexcept;
@@ -45,11 +45,11 @@ class Storage {
     [[nodiscard]] std::string_view string(size_t index) const noexcept;
 
   private:
-	std::vector<std::string_view> strings_;
-	std::vector<JsonValue> array_elements_;
-	std::vector<std::pair<uint32_t, uint32_t>> arrays_;
-	std::vector<JsonMember> object_elements_;
-	std::vector<std::pair<uint32_t, uint32_t>> objects_;
+    std::vector<std::string_view> strings_;
+    std::vector<JsonValue> array_elements_;
+    std::vector<std::pair<uint32_t, uint32_t>> arrays_;
+    std::vector<JsonMember> object_elements_;
+    std::vector<std::pair<uint32_t, uint32_t>> objects_;
     JsonValue root_{};
     bool root_set_{false};
 };
