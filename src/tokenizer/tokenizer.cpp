@@ -70,7 +70,7 @@ void Tokenizer::readString() noexcept {
 }
 
 void Tokenizer::readNumeric() noexcept {
-    auto begin = ++current_;
+    auto begin = current_;
     auto type = Token::Type::Integer;
 
     if (current_ < end_ && *current_ == '-') {
@@ -125,7 +125,7 @@ void Tokenizer::readNumeric() noexcept {
     }
 
     if (!is_error()) {
-        res_.emplace_back(type, std::string_view(begin, end_ - begin));
+        res_.emplace_back(type, std::string_view(begin, current_ - begin));
     }
 }
 
