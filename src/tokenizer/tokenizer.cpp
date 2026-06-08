@@ -8,6 +8,7 @@
  * @copyright Copyright (c) 2026
  */
 
+#include "constants/token_lut.hpp"
 #include "tokenizer/tokenizer.hpp"
 #include "utils/strings.hpp"
 
@@ -176,79 +177,75 @@ void Tokenizer::readAlphabet() noexcept {
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-        while (current_ < end_ && utils::is_whitespace(*current_)) {
-			++current_;
-		}
-
-		if (current_ >= end_) {
-			break;
-		}
-
-        switch (*current_) {
-            case '{': {
+        switch (constants::LUT_TOKEN[*current_]) {
+			case 0: {
+				while (current_ < end_ && utils::is_whitespace(*current_)) {
+					current_++;
+				}
+				continue;
+			}
+            case 1: {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
 				hint_.object_count++;
                 current_++;
                 continue;
             }
-            case '}': {
+            case 2: {
                 res_.emplace_back(Token::Type::RightCurlyBracket);
                 current_++;
                 continue;
             }
-            case '[': {
+            case 3: {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
 				hint_.array_count++;
                 current_++;
                 continue;
             }
-            case ']': {
+            case 4: {
                 res_.emplace_back(Token::Type::RightSquareBracket);
                 current_++;
                 continue;
             }
-            case ':': {
+            case 5: {
                 res_.emplace_back(Token::Type::Colon);
                 current_++;
                 continue;
             }
-            case ',': {
+            case 6: {
                 res_.emplace_back(Token::Type::Comma);
 				hint_.comma_count++;
                 current_++;
                 continue;
             }
-            case '\"': {
+            case 7: {
                 readString();
-                if (is_error()) {
+                if (is_error())
                     return;
-				}
-
 				hint_.string_count++;
                 continue;
             }
-            case '\'': {
+            case 8: {
+                readNumeric();
+                if (is_error())
+                    return;
+                continue;
+            }
+            case 9: {
+                readAlphabet();
+                if (is_error())
+                    return;
+                continue;
+            }
+            case 10: {
                 status_ = Error::SingleQuotedString;
                 return;
             }
             default: {
-                if (utils::is_numeric(*current_) || *current_ == '-') {
-					readNumeric();
-				} else if (utils::is_alphabet(*current_)) {
-					readAlphabet();
-				} else {
-					status_ = core::JsonError::Unknown;
-					return;
-				}
-
-				if (is_error()) {
-					return;
-				}
+                status_ = Error::Unknown;
+                return;
             }
         }
     }
-
-	res_.emplace_back(Token::Type::EndOfFile);
 }
 
 } // namespace zuu::tokenizer
