@@ -38,16 +38,13 @@ class Parser {
 
   private:
     Storage res_;
-	Raw raw_;
-    size_t idx_{};
+	const Token* current_;
+	const Token* end_;
     Error status_{core::JsonError::None};
 
     [[nodiscard]] size_t getStringCount() const noexcept;
     [[nodiscard]] size_t getArrayCount() const noexcept;
     [[nodiscard]] size_t getObjectCount() const noexcept;
-
-    [[nodiscard]] Token::Type peek() const noexcept;
-    void advance() noexcept;
 
     [[nodiscard]] JsonValue buildNull() noexcept;
     [[nodiscard]] JsonValue buildBoolean() noexcept;

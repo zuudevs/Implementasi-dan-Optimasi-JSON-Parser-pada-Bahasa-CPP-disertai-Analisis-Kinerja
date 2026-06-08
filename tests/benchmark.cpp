@@ -25,8 +25,8 @@ static void BM_Tokenizer(benchmark::State& state) {
     while (state.KeepRunning()) {
         auto tokens = zuu::tokenizer::Tokenizer::Tokenize(raw);
         if (!tokens) {
-            std::string err_msg = "Tokenizer failed during execution! Error Code: " +
-                                  std::to_string(static_cast<int>(tokens.error()));
+			std::string err_msg = std::string("Tokenizer failed during execution! Error: ") + 
+				zuu::utils::TranslateError(tokens.error());
             state.SkipWithError(err_msg.c_str());
             break;
         }
@@ -42,8 +42,8 @@ static void BM_ParserOnly(benchmark::State& state) {
 
     auto tokens_result = zuu::tokenizer::Tokenizer::Tokenize(raw);
     if (!tokens_result) {
-        std::string err_msg = "Tokenizer failed during setup! Error Code: " +
-                              std::to_string(static_cast<int>(tokens_result.error()));
+		std::string err_msg = std::string("Tokenizer failed during setup! Error: ") + 
+		zuu::utils::TranslateError(tokens_result.error());
         state.SkipWithError(err_msg.c_str());
         return;
     }
@@ -55,8 +55,8 @@ static void BM_ParserOnly(benchmark::State& state) {
         auto parsed = std::move(parser).result();
 
         if (!parsed) {
-            std::string err_msg = "Parser failed during DOM Construction! Error Code: " +
-                                  std::to_string(static_cast<int>(parsed.error()));
+			std::string err_msg = std::string("Parser failed during DOM Construction! Error: ") + 
+			zuu::utils::TranslateError(parsed.error());
             state.SkipWithError(err_msg.c_str());
             break;
         }
@@ -74,8 +74,7 @@ static void BM_FullPipeline(benchmark::State& state) {
     for (auto _ : state) {
         auto json = zuu::Json::parse(kJsonData);
         if (!json) {
-            std::string err_msg = "Full Pipeline failed! Error Code: " +
-                                  std::to_string(static_cast<int>(json.error()));
+            std::string err_msg = std::string("Full Pipeline failed! Error: ") + zuu::utils::TranslateError(json.error());
             state.SkipWithError(err_msg.c_str());
             break;
         }

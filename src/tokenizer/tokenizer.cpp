@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "constants/literal.hpp"
+#include "constants/lut_token.hpp"
 #include "tokenizer/tokenizer.hpp"
 #include "utils/strings.hpp"
 
@@ -37,12 +37,6 @@ bool Tokenizer::is_error() const noexcept {
     return status_ != Error::None;
 }
 
-void Tokenizer::skip_whitespace() noexcept {
-    while (current_ < end_ && utils::is_whitespace(*current_)) {
-        current_++;
-    }
-}
-
 void Tokenizer::readString() noexcept {
     auto begin = ++current_;
 
@@ -65,12 +59,12 @@ void Tokenizer::readString() noexcept {
         return;
     }
 
-    res_.emplace_back(Token::Type::String, std::string_view(begin, end_ - begin));
+    res_.emplace_back(Token::Type::String, std::string_view(begin, current_ - begin));
     current_++;
 }
 
 void Tokenizer::readNumeric() noexcept {
-    auto begin = ++current_;
+    auto begin = current_;
     auto type = Token::Type::Integer;
 
     if (current_ < end_ && *current_ == '-') {
@@ -125,118 +119,113 @@ void Tokenizer::readNumeric() noexcept {
     }
 
     if (!is_error()) {
-        res_.emplace_back(type, std::string_view(begin, end_ - begin));
+        res_.emplace_back(type, std::string_view(begin, current_ - begin));
     }
 }
 
 void Tokenizer::readAlphabet() noexcept {
-    unsigned char keyword_idx{0};
-    Token::Type type{};
-
     switch (*current_) {
-        case 'n':
-            keyword_idx = 0;
-            type = Token::Type::Null;
+        case 'n': {
+			const auto size = sizeof("null") - 1;
+            if (current_ + size <= end_ && memcmp(current_ + 1, "ull", size - 1) == 0) {
+                res_.emplace_back(Token::Type::Null, std::string_view(current_, size));
+
+                current_ += size;
+                return;
+            }
             break;
-        case 't':
-            keyword_idx = 1;
-            type = Token::Type::Boolean;
+		}
+        case 't': {
+			const auto size = sizeof("true") - 1;
+            if (current_ + size <= end_ && memcmp(current_ + 1, "rue", size - 1) == 0) {
+                res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
+
+                current_ += size;
+                return;
+            }
             break;
-        case 'f':
-            keyword_idx = 2;
-            type = Token::Type::Boolean;
+		}
+        case 'f': {
+			const auto size = sizeof("false") - 1;
+            if (current_ + size <= end_ && memcmp(current_ + 1, "alse", size - 1) == 0) {
+                res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
+
+                current_ += size;
+                return;
+            }
             break;
-        default:
-            status_ = Error::InvalidValue;
-            return;
+		}
+		default:
+			status_ = Error::InvalidValue;
     }
-
-    if (current_ + constants::JSON_LIT_SIZE[keyword_idx] > end_) {
-        status_ = Error::InvalidValue;
-        return;
-    }
-
-    if (!std::equal(
-		constants::JSON_LIT[keyword_idx],
-		constants::JSON_LIT[keyword_idx] + constants::JSON_LIT_SIZE[keyword_idx],
-		current_
-	)) {
-		status_ = core::JsonError::InvalidValue;
-		return;
-	}
-
-	auto end_lit = current_ + constants::JSON_LIT_SIZE[keyword_idx];
-	if (end_lit < end_ && (utils::is_alphabet(*end_lit) || utils::is_numeric(*end_lit))) {
-		status_ = core::JsonError::InvalidValue;
-		return;
-	}
-
-	res_.emplace_back(type, std::string_view(current_, end_lit - current_));
-	current_ = end_lit;
 }
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-        skip_whitespace();
-
-        if (current_ >= end_) {
-            break;
-        }
-
-        switch (*current_) {
-            case '{': {
+		
+        switch (constants::LUT_TOKEN[*current_]) {
+			case 0: {
+				current_++;
+				while (current_ < end_ && utils::is_whitespace(*current_)) {
+					current_++;
+				}
+				continue;
+			}
+            case 1: {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
                 current_++;
                 continue;
             }
-            case '}': {
+            case 2: {
                 res_.emplace_back(Token::Type::RightCurlyBracket);
                 current_++;
                 continue;
             }
-            case '[': {
+            case 3: {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
                 current_++;
                 continue;
             }
-            case ']': {
+            case 4: {
                 res_.emplace_back(Token::Type::RightSquareBracket);
                 current_++;
                 continue;
             }
-            case ':': {
+            case 5: {
                 res_.emplace_back(Token::Type::Colon);
                 current_++;
                 continue;
             }
-            case ',': {
+            case 6: {
                 res_.emplace_back(Token::Type::Comma);
                 current_++;
                 continue;
             }
-            case '\"': {
+            case 7: {
                 readString();
                 if (is_error())
                     return;
                 continue;
             }
-            case '\'': {
+            case 8: {
+                readNumeric();
+                if (is_error())
+                    return;
+                continue;
+            }
+            case 9: {
+                readAlphabet();
+                if (is_error())
+                    return;
+                continue;
+            }
+            case 10: {
                 status_ = Error::SingleQuotedString;
                 return;
             }
             default: {
-                if (utils::is_numeric(*current_) || *current_ == '-') {
-                    readNumeric();
-                } else if (utils::is_alphabet(*current_)) {
-                    readAlphabet();
-                } else {
-                    status_ = Error::Unknown;
-                    return;
-                }
-
-                if (is_error()) {
-                    return;
-                }
+                status_ = Error::Unknown;
+                return;
             }
         }
     }
