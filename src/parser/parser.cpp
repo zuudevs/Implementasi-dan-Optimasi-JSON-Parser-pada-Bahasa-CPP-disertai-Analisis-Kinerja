@@ -50,6 +50,13 @@ Parser::Expected Parser::result() const noexcept {
     return res_;
 }
 
+Parser::Expected Parser::result() && noexcept {
+    if (has_error()) {
+        return std::unexpected{status_};
+    }
+    return std::move(res_);
+}
+
 bool Parser::has_error() const noexcept {
     return status_ != Error::None;
 }
@@ -60,14 +67,14 @@ Parser::JsonValue Parser::buildNull() noexcept {
 }
 
 Parser::JsonValue Parser::buildBoolean() noexcept {
-    const auto value = current_->value_ == "true";
+    const auto value = (current_->value()[0] == 't');
     current_++;
     return Parser::JsonValue::Boolean(value);
 }
 
 Parser::JsonValue Parser::buildInteger() noexcept {
     long long value{};
-    const auto view = current_->value_;
+    const auto view = current_->value();
     auto [ptr, ec] = std::from_chars(view.data(), view.data() + view.size(), value);
     if (ec != std::errc{} || ptr != view.data() + view.size()) {
         status_ = core::JsonError::InvalidValue;
@@ -79,7 +86,7 @@ Parser::JsonValue Parser::buildInteger() noexcept {
 
 Parser::JsonValue Parser::buildDouble() noexcept {
 	double value{};
-    const auto view = current_->value_;
+    const auto view = current_->value();
     auto [ptr, ec] = std::from_chars(
 		view.data(),
 		view.data() + view.size(),
@@ -95,7 +102,7 @@ Parser::JsonValue Parser::buildDouble() noexcept {
 }
 
 Parser::JsonValue Parser::buildString() noexcept {
-    const auto index = res_.commitString(current_->value_);
+    const auto index = res_.commitString(current_->value());
     ++current_;
     return Parser::JsonValue::String(index);
 }
@@ -166,7 +173,7 @@ Parser::JsonValue Parser::buildObject() noexcept {
 		}
 
 		const auto key_index = res_.commitString(
-			current_->value_
+			current_->value()
 		);
 		++current_;
 
@@ -250,7 +257,7 @@ void Parser::parse() noexcept {
     }
 
     res_.setRoot(root);
-    if (current_->type_ != TokenType::EndOfFile) {
+    if (current_ == end_ || current_->type_ != TokenType::EndOfFile) {
         status_ = core::JsonError::InvalidValue;
     }
 }

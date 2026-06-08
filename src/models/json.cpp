@@ -29,7 +29,7 @@ Json::Result<Json> Json::parse(std::string_view content) noexcept {
     }
 
     parser::Parser parser(tokens.value());
-    auto parsed = parser.result();
+    auto parsed = std::move(parser).result();
     if (!parsed) {
         return std::unexpected{parsed.error()};
     }

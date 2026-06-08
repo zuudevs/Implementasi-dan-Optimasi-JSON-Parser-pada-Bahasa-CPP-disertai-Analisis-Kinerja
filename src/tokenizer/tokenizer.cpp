@@ -141,17 +141,16 @@ void Tokenizer::readNumeric() noexcept {
 void Tokenizer::readAlphabet() noexcept {
     switch (*current_) {
         case 'n': {
-			const auto size = sizeof("null") - 1;
+			constexpr auto size = sizeof("null") - 1;
             if (current_ + size <= end_ && memcmp(current_ + 1, "ull", size - 1) == 0) {
                 res_.emplace_back(Token::Type::Null, std::string_view(current_, size));
-
                 current_ += size;
                 return;
             }
             break;
 		}
         case 't': {
-			const auto size = sizeof("true") - 1;
+			constexpr auto size = sizeof("true") - 1;
             if (current_ + size <= end_ && memcmp(current_ + 1, "rue", size - 1) == 0) {
                 res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
 
@@ -161,7 +160,7 @@ void Tokenizer::readAlphabet() noexcept {
             break;
 		}
         case 'f': {
-			const auto size = sizeof("false") - 1;
+			constexpr auto size = sizeof("false") - 1;
             if (current_ + size <= end_ && memcmp(current_ + 1, "alse", size - 1) == 0) {
                 res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
 
@@ -171,18 +170,19 @@ void Tokenizer::readAlphabet() noexcept {
             break;
 		}
 		default:
-			status_ = Error::InvalidValue;
+			break;
     }
+	status_ = Error::InvalidValue;
 }
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-        switch (constants::LUT_TOKEN[*current_]) {
+        switch (constants::LUT_TOKEN[static_cast<unsigned char>(*current_)]) {
 			case 0: {
-				while (current_ < end_ && utils::is_whitespace(*current_)) {
-					current_++;
-				}
-				continue;
+				do { 
+					++current_; 
+				} while (current_ < end_ && constants::LUT_TOKEN[static_cast<unsigned char>(*current_)] == 0);
+                continue;
 			}
             case 1: {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
@@ -246,6 +246,7 @@ void Tokenizer::tokenize() noexcept {
             }
         }
     }
+	res_.emplace_back(Token::Type::EndOfFile);
 }
 
 } // namespace zuu::tokenizer
