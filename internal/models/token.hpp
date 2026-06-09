@@ -1,6 +1,6 @@
 /**
  * @file token.hpp
- * @author zuudevs (zuudevs@gmail.com)
+ * @author zuu::modelsdevs (zuu::modelsdevs@gmail.com)
  * @brief Brief description
  * @version 0.1.0
  * @date 2026-06-06
@@ -13,24 +13,11 @@
 #include "models/hint.hpp"
 #include <string_view>
 
-namespace zuu {
+namespace zuu::models {
 
-namespace tokenizer {
+struct Token {
+	static constexpr unsigned char layout_required_size = 16;
 
-class Tokenizer;
-
-} // namespace tokenizer
-
-namespace parser {
-
-class Parser;
-
-} // namespace parser
-
-namespace models {
-
-class Token {
-  public:
     enum class Type : unsigned char {
         LeftCurlyBracket, RightCurlyBracket,
         LeftSquareBracket, RightSquareBracket,
@@ -48,18 +35,14 @@ class Token {
         return {data_, size_};
     }
 
-  private:
     const char* data_{nullptr};  // 8 bytes — offset  0
     uint32_t    size_{0};        // 4 bytes — offset  8
     Type        type_;           // 1 byte  — offset 12   ← was offset 16
     // 3 bytes padding
     // sizeof(Token) == 16  (was 24)
-
-    friend class tokenizer::Tokenizer;
-    friend class parser::Parser;
 };
 
-static_assert(sizeof(Token) == 16, "Token layout changed unexpectedly");
+static_assert(sizeof(Token) == Token::layout_required_size, "Token layout changed unexpectedly");
 
 template <>
 struct Hint<Token> {
@@ -69,6 +52,4 @@ struct Hint<Token> {
 	size_t comma_count{0};
 };
 
-} // namespace models
-
-} // namespace zuu
+} // namespace zuu::models
