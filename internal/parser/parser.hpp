@@ -15,6 +15,7 @@
 #include "models/token.hpp"
 #include <expected>
 #include <span>
+#include <string_view>
 
 namespace zuu::parser {
 
@@ -51,6 +52,9 @@ class Parser {
     [[nodiscard]] JsonValue buildArray() noexcept;
     [[nodiscard]] JsonValue buildObject() noexcept;
     [[nodiscard]] JsonValue buildValue() noexcept;
+
+    [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept;
+    [[nodiscard]] uint32_t decodeUnicodeHex(const char* ptr) noexcept;
 
     void parse() noexcept;
 };

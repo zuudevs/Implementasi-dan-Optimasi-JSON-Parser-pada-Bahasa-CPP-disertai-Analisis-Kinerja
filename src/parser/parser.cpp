@@ -84,8 +84,113 @@ Parser::JsonValue Parser::buildDouble() noexcept {
     return Parser::JsonValue::Double(value);
 }
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
+
+uint32_t Parser::decodeUnicodeHex(const char* ptr) noexcept {
+    uint32_t value = 0;
+    for (int i = 0; i < 4; ++i) {
+        char c = ptr[i];
+        value <<= 4;
+        if (c >= '0' && c <= '9') value |= (c - '0');
+        else if (c >= 'a' && c <= 'f') value |= (c - 'a' + 10);
+        else if (c >= 'A' && c <= 'F') value |= (c - 'A' + 10);
+        else {
+            status_ = core::JsonError::InvalidValue;
+            return 0;
+        }
+    }
+    return value;
+}
+
+std::string_view Parser::unescapeString(std::string_view src) noexcept {
+    // Alokasikan ruang buffer di dalam Memory Arena 
+    char* dest = res_.allocateStringBuffer(src.size());
+    char* out = dest;
+    const char* ptr = src.data();
+    const char* end = ptr + src.size();
+
+    while (ptr < end) {
+        if (*ptr == '\\') {
+            ++ptr;
+            if (ptr >= end) break;
+            switch (*ptr) {
+                case '"': *out++ = '"'; break;
+                case '\\': *out++ = '\\'; break;
+                case '/': *out++ = '/'; break;
+                case 'b': *out++ = '\b'; break;
+                case 'f': *out++ = '\f'; break;
+                case 'n': *out++ = '\n'; break;
+                case 'r': *out++ = '\r'; break;
+                case 't': *out++ = '\t'; break;
+                case 'u': {
+                    if (ptr + 5 > end) {
+                        status_ = core::JsonError::InvalidValue;
+                        return {};
+                    }
+                    uint32_t cp = decodeUnicodeHex(ptr + 1);
+                    ptr += 4; 
+
+                    // Konversi UTF-16 Surrogate Pairs ke format UTF-8
+                    if (cp >= 0xD800 && cp <= 0xDBFF) {
+                        if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
+                            uint32_t cp2 = decodeUnicodeHex(ptr + 3);
+                            if (cp2 >= 0xDC00 && cp2 <= 0xDFFF) {
+                                cp = 0x10000 + (((cp - 0xD800) << 10) | (cp2 - 0xDC00));
+                                ptr += 6; 
+                            } else {
+                                status_ = core::JsonError::InvalidValue; return {};
+                            }
+                        } else {
+                            status_ = core::JsonError::InvalidValue; return {};
+                        }
+                    }
+
+                    // Tulis hasil UTF-8 ke tujuan memory arena
+                    if (cp <= 0x7F) {
+                        *out++ = static_cast<char>(cp);
+                    } else if (cp <= 0x7FF) {
+                        *out++ = static_cast<char>(0xC0 | ((cp >> 6) & 0x1F));
+                        *out++ = static_cast<char>(0x80 | (cp & 0x3F));
+                    } else if (cp <= 0xFFFF) {
+                        *out++ = static_cast<char>(0xE0 | ((cp >> 12) & 0x0F));
+                        *out++ = static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                        *out++ = static_cast<char>(0x80 | (cp & 0x3F));
+                    } else if (cp <= 0x10FFFF) {
+                        *out++ = static_cast<char>(0xF0 | ((cp >> 18) & 0x07));
+                        *out++ = static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
+                        *out++ = static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                        *out++ = static_cast<char>(0x80 | (cp & 0x3F));
+                    } else {
+                        status_ = core::JsonError::InvalidValue; return {};
+                    }
+                    break;
+                }
+                default:
+                    status_ = core::JsonError::InvalidValue;
+                    return {};
+            }
+        } else {
+            *out++ = *ptr;
+        }
+        ++ptr;
+    }
+    return {dest, static_cast<size_t>(out - dest)};
+}
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
+
 Parser::JsonValue Parser::buildString() noexcept {
-    const auto index = res_.commitString(current_->value());
+    std::string_view val = current_->value();
+    
+    // Lazy Evaluation: Decode hanya jika terbukti ada karakter escape
+    if (current_->has_escape_) {
+        val = unescapeString(val);
+        if (has_error()) [[unlikely]] {
+            return JsonValue::Null();
+        }
+    }
+    
+    const auto index = res_.commitString(val);
     ++current_;
     return Parser::JsonValue::String(index);
 }
@@ -143,7 +248,14 @@ Parser::JsonValue Parser::buildObject() noexcept {
             return JsonValue::Null();
         }
 
-        const auto key_index = res_.commitString(current_->value());
+        // Terapkan Zero-copy fallback atau Unescaping untuk Key objek JSON
+        std::string_view key_val = current_->value();
+        if (current_->has_escape_) {
+            key_val = unescapeString(key_val);
+            if (has_error()) [[unlikely]] return JsonValue::Null();
+        }
+
+        const auto key_index = res_.commitString(key_val);
         ++current_;
 
         if (current_->type_ != TokenType::Colon) [[unlikely]] {

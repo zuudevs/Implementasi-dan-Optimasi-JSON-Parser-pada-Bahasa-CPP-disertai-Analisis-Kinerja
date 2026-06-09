@@ -16,44 +16,41 @@ Storage::Storage(models::Hint<Token> hint) noexcept {
     const size_t max_strings = hint.string_count;
     const size_t max_arrays = hint.array_count;
     const size_t max_objects = hint.object_count;
-    // Estimasi batas atas (upper bound) yang aman untuk menjamin tidak ada overflow
     const size_t max_elements = hint.comma_count + hint.array_count + hint.object_count;
 
-    // Hitung ukuran raw bytes untuk setiap blok
     const size_t strings_bytes = max_strings * sizeof(std::string_view);
     const size_t array_elem_bytes = max_elements * sizeof(JsonValue);
     const size_t arrays_bytes = max_arrays * sizeof(std::pair<uint32_t, uint32_t>);
     const size_t obj_elem_bytes = max_elements * sizeof(JsonMember);
     const size_t objects_bytes = max_objects * sizeof(std::pair<uint32_t, uint32_t>);
+    
+    // Alokasi ruang untuk unescaped characters (beserta margin aman 10%)
+    const size_t str_buf_bytes = hint.string_escape_bytes;
 
-    const size_t total_bytes = strings_bytes + array_elem_bytes + arrays_bytes + obj_elem_bytes + objects_bytes;
+    const size_t total_bytes = strings_bytes + array_elem_bytes + arrays_bytes + obj_elem_bytes + objects_bytes + str_buf_bytes;
 
     if (total_bytes > 0) {
-        // Melakukan HANYA SATU KALI alokasi untuk seumur hidup dokumen JSON
-		// NOLINTNEXTLINE(modernize-avoid-c-arrays)
         arena_ = std::make_unique<std::byte[]>(total_bytes);
         
         std::byte* ptr = arena_.get();
 
-        // Partisi memori dan mapping pointer
-		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         strings_ = reinterpret_cast<std::string_view*>(ptr);
         ptr += strings_bytes;
 
-		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         array_elements_ = reinterpret_cast<JsonValue*>(ptr);
         ptr += array_elem_bytes;
 
-		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         arrays_ = reinterpret_cast<std::pair<uint32_t, uint32_t>*>(ptr);
         ptr += arrays_bytes;
 
-		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         object_elements_ = reinterpret_cast<JsonMember*>(ptr);
         ptr += obj_elem_bytes;
 
-		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         objects_ = reinterpret_cast<std::pair<uint32_t, uint32_t>*>(ptr);
+        ptr += objects_bytes;
+
+        // Ditempatkan paling akhir agar tidak merusak byte alignment dari tipe data lain di atasnya
+        string_buffer_ = reinterpret_cast<char*>(ptr);
     }
 }
 
@@ -71,12 +68,16 @@ const JsonValue& Storage::root() const noexcept {
 }
 
 // ── BUMP ALLOCATOR OPERATIONS ───────────────────────────────────────────────
-// Operasi di bawah ini telah dikonversi menjadi instuksi pointer aritmetika
-// yang akan langsung diterjemahkan menjadi register assignment pada Assembly CPU.
 
 size_t Storage::commitString(std::string_view value) noexcept {
     strings_[strings_size_] = value;
     return strings_size_++;
+}
+
+char* Storage::allocateStringBuffer(size_t length) noexcept {
+    char* allocated = string_buffer_ + string_buffer_size_;
+    string_buffer_size_ += static_cast<uint32_t>(length);
+    return allocated;
 }
 
 size_t Storage::getArrayOffset() const noexcept {

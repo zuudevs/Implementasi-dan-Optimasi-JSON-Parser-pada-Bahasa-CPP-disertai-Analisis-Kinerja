@@ -40,6 +40,9 @@ class Storage {
 
     [[nodiscard]] size_t commitString(std::string_view value) noexcept;
 
+    // Fast-path untuk unescaping
+    [[nodiscard]] char* allocateStringBuffer(size_t length) noexcept;
+
     // Fast-path untuk Parser (Bump Allocation)
     [[nodiscard]] size_t getArrayOffset() const noexcept;
     void pushArrayElement(const JsonValue& val) noexcept;
@@ -54,11 +57,8 @@ class Storage {
     [[nodiscard]] std::string_view string(size_t index) const noexcept;
 
   private:
-    // Memory Arena: Satu blok alokasi mentah untuk seluruh dokumen
-	// NOLINTNEXTLINE(modernize-avoid-c-arrays)
     std::unique_ptr<std::byte[]> arena_;
 
-    // Pointers dan sizes untuk menggantikan overhead std::vector
     std::string_view* strings_{nullptr};
     uint32_t strings_size_{0};
 
@@ -73,6 +73,10 @@ class Storage {
 
     std::pair<uint32_t, uint32_t>* objects_{nullptr};
     uint32_t objects_size_{0};
+
+    // Buffer mentah untuk teks string yang membutuhkan Unescaping
+    char* string_buffer_{nullptr};
+    uint32_t string_buffer_size_{0};
 
     JsonValue root_{};
     bool root_set_{false};
