@@ -126,33 +126,44 @@ void Tokenizer::readNumeric() noexcept {
 }
 
 void Tokenizer::readAlphabet() noexcept {
+	const auto rem = end_ - current_;
     switch (*current_) {
         case 'n': {
-            constexpr auto size = sizeof("null") - 1;
-            constexpr auto size1 = size - 1;
-            if (current_ + size <= end_ && memcmp(current_ + 1, "ull", size1) == 0) {
-                res_.emplace_back(Token::Type::Null, std::string_view(current_, size));
-                current_ += size;
+            if (
+				rem >= 4 &&
+				current_[1] == 'u' &&
+				current_[2] == 'l' &&
+				current_[3] == 'l'
+			) {
+                res_.emplace_back(Token::Type::Null, std::string_view(current_, 4));
+                current_ += 4;
                 return;
             }
             break;
         }
         case 't': {
-            constexpr auto size = sizeof("true") - 1;
-            constexpr auto size1 = size - 1;
-            if (current_ + size <= end_ && memcmp(current_ + 1, "rue", size1) == 0) {
-                res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
-                current_ += size;
+            if (
+				rem >= 4 &&
+				current_[1] == 'r' &&
+				current_[2] == 'u' &&
+				current_[3] == 'e'
+			) {
+                res_.emplace_back(Token::Type::Null, std::string_view(current_, 4));
+                current_ += 4;
                 return;
             }
             break;
         }
         case 'f': {
-            constexpr auto size = sizeof("false") - 1;
-            constexpr auto size1 = size - 1;
-            if (current_ + size <= end_ && memcmp(current_ + 1, "alse", size1) == 0) {
-                res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
-                current_ += size;
+            if (
+				rem >= 4 &&
+				current_[1] == 'a' &&
+				current_[2] == 'l' &&
+				current_[3] == 's' &&
+				current_[4] == 'e'
+			) {
+                res_.emplace_back(Token::Type::Null, std::string_view(current_, 5));
+                current_ += 5;
                 return;
             }
             break;
@@ -165,7 +176,6 @@ void Tokenizer::readAlphabet() noexcept {
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-        // NOLINENEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
         switch (constants::LUT_TOKEN[static_cast<unsigned char>(*current_)]) {
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
             case 0: {
