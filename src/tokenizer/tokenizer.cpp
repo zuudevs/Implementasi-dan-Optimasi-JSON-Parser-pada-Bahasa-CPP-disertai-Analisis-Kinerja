@@ -164,7 +164,7 @@ void Tokenizer::readAlphabet() noexcept {
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-		// NOLINENEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
         switch (*(constants::LUT_TOKEN + *current_)) {
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
             case 0: {
