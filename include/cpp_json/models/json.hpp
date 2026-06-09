@@ -32,7 +32,8 @@ class Storage;
 class Json {
   public:
     using Error = core::JsonError;
-    template <typename T> using Result = std::expected<T, Error>;
+    template <typename T>
+    using Result = std::expected<T, Error>;
 
     Json(Json&&) noexcept;
     Json& operator=(Json&&) noexcept;

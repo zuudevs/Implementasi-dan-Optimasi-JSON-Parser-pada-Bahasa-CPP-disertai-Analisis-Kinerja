@@ -35,7 +35,10 @@ struct Token {
     };
 
     Token(Type type, std::string_view value = "", bool has_escape = false) noexcept
-        : data_(value.data()), size_(static_cast<uint32_t>(value.size())), type_(type), has_escape_(has_escape) {}
+        : data_(value.data())
+        , size_(static_cast<uint32_t>(value.size()))
+        , type_(type)
+        , has_escape_(has_escape) {}
 
     [[nodiscard]] constexpr std::string_view value() const noexcept {
         return {data_, size_};
@@ -51,12 +54,14 @@ struct Token {
 
 static_assert(sizeof(Token) == Token::layout_required_size, "Token layout changed unexpectedly");
 
-template <> struct Hint<Token> {
+template <>
+struct Hint<Token> {
     size_t string_count{0};
     size_t array_count{0};
     size_t object_count{0};
     size_t comma_count{0};
-    size_t string_escape_bytes{0}; // Mencatat total memori maksimal untuk string yang butuh unescaping
+    size_t string_escape_bytes{
+        0}; // Mencatat total memori maksimal untuk string yang butuh unescaping
 };
 
 } // namespace zuu::models

@@ -23,15 +23,16 @@ Storage::Storage(models::Hint<Token> hint) noexcept {
     const size_t arrays_bytes = max_arrays * sizeof(std::pair<uint32_t, uint32_t>);
     const size_t obj_elem_bytes = max_elements * sizeof(JsonMember);
     const size_t objects_bytes = max_objects * sizeof(std::pair<uint32_t, uint32_t>);
-    
+
     // Alokasi ruang untuk unescaped characters (beserta margin aman 10%)
     const size_t str_buf_bytes = hint.string_escape_bytes;
 
-    const size_t total_bytes = strings_bytes + array_elem_bytes + arrays_bytes + obj_elem_bytes + objects_bytes + str_buf_bytes;
+    const size_t total_bytes = strings_bytes + array_elem_bytes + arrays_bytes + obj_elem_bytes +
+                               objects_bytes + str_buf_bytes;
 
     if (total_bytes > 0) {
         arena_ = std::make_unique<std::byte[]>(total_bytes);
-        
+
         std::byte* ptr = arena_.get();
 
         strings_ = reinterpret_cast<std::string_view*>(ptr);

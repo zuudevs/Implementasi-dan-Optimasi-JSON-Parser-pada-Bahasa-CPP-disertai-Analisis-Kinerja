@@ -14,7 +14,8 @@
 
 namespace zuu::models {
 
-Json::Json(std::unique_ptr<Storage> storage) noexcept : storage_(std::move(storage)) {}
+Json::Json(std::unique_ptr<Storage> storage) noexcept
+    : storage_(std::move(storage)) {}
 
 Json::Json(Json&&) noexcept = default;
 Json& Json::operator=(Json&&) noexcept = default;

@@ -13,8 +13,23 @@
 
 namespace zuu::tokenizer {
 
+// ── SWAR (SIMD Within A Register) Helpers ────────────────────────────────────
+
+[[nodiscard]] inline constexpr bool has_zero_byte(uint64_t v) noexcept {
+    return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
+}
+
+[[nodiscard]] inline constexpr bool has_quote_or_escape(uint64_t v) noexcept {
+    const uint64_t quote_mask = v ^ 0x2222222222222222ULL;
+    const uint64_t escape_mask = v ^ 0x5C5C5C5C5C5C5C5CULL;
+    return has_zero_byte(quote_mask) | has_zero_byte(escape_mask);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
-    : current_(json_content.data()), end_(json_content.data() + json_content.size()) {
+    : current_(json_content.data())
+    , end_(json_content.data() + json_content.size()) {
     res_.reserve((json_content.size() >> 1) + 16);
     tokenize();
 }
@@ -36,26 +51,40 @@ bool Tokenizer::is_error() const noexcept {
 }
 
 void Tokenizer::readString() noexcept {
-    const char* begin = ++current_; // Lewati tanda kutip pembuka
+    const char* begin = ++current_;
     const char* ptr = begin;
     const char* end = end_;
     bool has_escape = false;
 
-    // Fast scalar scan: Zero overhead jika tidak ada karakter escape
+    // Fast-path SWAR: Pindai 8 bytes sekaligus
+    while (ptr + 8 <= end) {
+        uint64_t block{};
+        std::memcpy(&block, ptr, 8);
+
+        if (has_quote_or_escape(block)) {
+            break; // Jika ada '"' atau '\', keluar dan evaluasi secara presisi di slow-path
+        }
+        ptr += 8;
+    }
+
+    // Slow-path skalar untuk resolusi akhir dan tracking escape character
     while (ptr < end) {
         char c = *ptr;
         if (c == '"') [[likely]] {
-            res_.emplace_back(Token::Type::String, std::string_view(begin, ptr - begin), has_escape);
-            // Hanya alokasikan quota arena jika string ini memang punya escape character
+            res_.emplace_back(
+                Token::Type::String, std::string_view(begin, ptr - begin), has_escape);
+
+            // Catat kebutuhan buffer jika string memiliki escape
             if (has_escape) {
                 hint_.string_escape_bytes += (ptr - begin);
             }
+
             current_ = ptr + 1;
             return;
         }
         if (c == '\\') [[unlikely]] {
             has_escape = true;
-            ptr += 2; // Lewati karakter backslash dan karakter escape setelahnya
+            ptr += 2; // Lewati karakter escape
             if (ptr > end) {
                 status_ = core::JsonError::InvalidValue;
                 return;
@@ -129,16 +158,17 @@ void Tokenizer::readAlphabet() noexcept {
     const auto rem = end_ - current_;
     char c = *current_;
 
-    if (c == 'f' && rem >= 5 && current_[1] == 'a' && current_[2] == 'l' && current_[3] == 's' && current_[4] == 'e') {
+    if (c == 'f' && rem >= 5 && current_[1] == 'a' && current_[2] == 'l' && current_[3] == 's' &&
+        current_[4] == 'e') {
         res_.emplace_back(Token::Type::Boolean, std::string_view(current_, 5));
         current_ += 5;
         return;
-    } 
+    }
     if (c == 't' && rem >= 4 && current_[1] == 'r' && current_[2] == 'u' && current_[3] == 'e') {
         res_.emplace_back(Token::Type::Boolean, std::string_view(current_, 4));
         current_ += 4;
         return;
-    } 
+    }
     if (c == 'n' && rem >= 4 && current_[1] == 'u' && current_[2] == 'l' && current_[3] == 'l') {
         res_.emplace_back(Token::Type::Null, std::string_view(current_, 4));
         current_ += 4;

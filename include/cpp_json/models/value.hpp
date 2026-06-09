@@ -36,7 +36,8 @@ class Json;
  */
 class Value {
   public:
-    template <typename T> using Result = std::expected<T, core::JsonError>;
+    template <typename T>
+    using Result = std::expected<T, core::JsonError>;
     using Type = core::Type;
     using Storage = Storage;
     using JsonValue = JsonValue;

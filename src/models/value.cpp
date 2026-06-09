@@ -13,7 +13,9 @@
 
 namespace zuu::models {
 
-Value::Value(const Storage* storage, JsonValue value) noexcept : storage_(storage), value_(value) {}
+Value::Value(const Storage* storage, JsonValue value) noexcept
+    : storage_(storage)
+    , value_(value) {}
 
 // ── Internal factory ──────────────────────────────────────────────────────────
 

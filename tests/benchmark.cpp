@@ -15,7 +15,60 @@
 #include <string>
 
 static constexpr std::string_view kJsonData =
-    R"({"name": "benchmark", "values": [1, 2, 3, 4, 5], "nested": {"x": 10.5, "y": -20.5}, "active": true, "null_val": null})";
+    R"({
+    "web-app": {
+        "servlet": [
+            {
+                "servlet-name": "cofaxCDS",
+                "servlet-class": "org.cofax.cds.CDSServlet",
+                "init-param": {
+                    "configGlossary:installationAt": "Philadelphia, PA",
+                    "configGlossary:adminEmail": "ksm@pobox.com",
+                    "configGlossary:poweredBy": "Cofax",
+                    "configGlossary:poweredByIcon": "/images/cofax.gif",
+                    "configGlossary:staticPath": "/content/static",
+                    "templateProcessorClass": "org.cofax.WysiwygTemplate",
+                    "templateLoaderClass": "org.cofax.FilesTemplateLoader",
+                    "templatePath": "templates"
+                }
+            },
+            {
+                "servlet-name": "cofaxAdmin",
+                "servlet-class": "org.cofax.cds.AdminServlet"
+            },
+            {
+                "servlet-name": "cofaxTools",
+                "servlet-class": "org.cofax.cms.CofaxToolsServlet",
+                "init-param": {
+                    "templatePath": "toolstemplates/",
+                    "log": 1,
+                    "logLocation": "/usr/local/tomcat/logs/CofaxTools.log",
+                    "logMaxSize": "",
+                    "dataLog": 1,
+                    "dataLogLocation": "/usr/local/tomcat/logs/dataLog.log",
+                    "dataLogMaxSize": "",
+                    "removePageCache": "/content/admin/remove?cache=pages&id=",
+                    "removeTemplateCache": "/content/admin/remove?cache=templates&id=",
+                    "fileTransferFolder": "/usr/local/tomcat/webapps/content/fileTransferFolder",
+                    "lookInContext": 1,
+                    "adminGroupID": 4,
+                    "betaServer": true
+                }
+            }
+        ],
+        "servlet-mapping": {
+            "cofaxCDS": "/",
+            "cofaxEmail": "/cofaxutil/aemail/*",
+            "cofaxAdmin": "/admin/*",
+            "fileServlet": "/static/*",
+            "cofaxTools": "/tools/*"
+        },
+        "taglib": {
+            "taglib-uri": "cofax.tld",
+            "taglib-location": "/WEB-INF/tlds/cofax.tld"
+        }
+    }
+})";
 
 // ── BENCHMARK 1: Tokenizer murni ──
 static void BM_Tokenizer(benchmark::State& state) {

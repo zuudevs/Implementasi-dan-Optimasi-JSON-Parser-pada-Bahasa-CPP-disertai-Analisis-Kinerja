@@ -12,6 +12,7 @@
 
 namespace zuu::models {
 
-template <typename T> struct Hint;
+template <typename T>
+struct Hint;
 
 } // namespace zuu::models

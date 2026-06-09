@@ -14,8 +14,9 @@
 namespace zuu::parser {
 
 Parser::Parser(Resources resources) noexcept
-    : res_(resources.second), current_(resources.first.data()),
-      end_(resources.first.data() + resources.first.size()) {
+    : res_(resources.second)
+    , current_(resources.first.data())
+    , end_(resources.first.data() + resources.first.size()) {
     parse();
 }
 
@@ -49,7 +50,7 @@ Parser::JsonValue Parser::buildInteger() noexcept {
     const auto view = current_->value();
     const char* ptr = view.data();
     const char* end = ptr + view.size();
-    
+
     long long value = 0;
     bool is_negative = false;
 
@@ -59,7 +60,7 @@ Parser::JsonValue Parser::buildInteger() noexcept {
     }
 
     while (ptr < end) {
-        value = (value << 3) + (value << 1) + (*ptr - '0'); 
+        value = (value << 3) + (value << 1) + (*ptr - '0');
         ++ptr;
     }
 
@@ -91,9 +92,12 @@ uint32_t Parser::decodeUnicodeHex(const char* ptr) noexcept {
     for (int i = 0; i < 4; ++i) {
         char c = ptr[i];
         value <<= 4;
-        if (c >= '0' && c <= '9') value |= (c - '0');
-        else if (c >= 'a' && c <= 'f') value |= (c - 'a' + 10);
-        else if (c >= 'A' && c <= 'F') value |= (c - 'A' + 10);
+        if (c >= '0' && c <= '9')
+            value |= (c - '0');
+        else if (c >= 'a' && c <= 'f')
+            value |= (c - 'a' + 10);
+        else if (c >= 'A' && c <= 'F')
+            value |= (c - 'A' + 10);
         else {
             status_ = core::JsonError::InvalidValue;
             return 0;
@@ -103,7 +107,7 @@ uint32_t Parser::decodeUnicodeHex(const char* ptr) noexcept {
 }
 
 std::string_view Parser::unescapeString(std::string_view src) noexcept {
-    // Alokasikan ruang buffer di dalam Memory Arena 
+    // Alokasikan ruang buffer di dalam Memory Arena
     char* dest = res_.allocateStringBuffer(src.size());
     char* out = dest;
     const char* ptr = src.data();
@@ -112,23 +116,40 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
     while (ptr < end) {
         if (*ptr == '\\') {
             ++ptr;
-            if (ptr >= end) break;
+            if (ptr >= end)
+                break;
             switch (*ptr) {
-                case '"': *out++ = '"'; break;
-                case '\\': *out++ = '\\'; break;
-                case '/': *out++ = '/'; break;
-                case 'b': *out++ = '\b'; break;
-                case 'f': *out++ = '\f'; break;
-                case 'n': *out++ = '\n'; break;
-                case 'r': *out++ = '\r'; break;
-                case 't': *out++ = '\t'; break;
+                case '"':
+                    *out++ = '"';
+                    break;
+                case '\\':
+                    *out++ = '\\';
+                    break;
+                case '/':
+                    *out++ = '/';
+                    break;
+                case 'b':
+                    *out++ = '\b';
+                    break;
+                case 'f':
+                    *out++ = '\f';
+                    break;
+                case 'n':
+                    *out++ = '\n';
+                    break;
+                case 'r':
+                    *out++ = '\r';
+                    break;
+                case 't':
+                    *out++ = '\t';
+                    break;
                 case 'u': {
                     if (ptr + 5 > end) {
                         status_ = core::JsonError::InvalidValue;
                         return {};
                     }
                     uint32_t cp = decodeUnicodeHex(ptr + 1);
-                    ptr += 4; 
+                    ptr += 4;
 
                     // Konversi UTF-16 Surrogate Pairs ke format UTF-8
                     if (cp >= 0xD800 && cp <= 0xDBFF) {
@@ -136,12 +157,14 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
                             uint32_t cp2 = decodeUnicodeHex(ptr + 3);
                             if (cp2 >= 0xDC00 && cp2 <= 0xDFFF) {
                                 cp = 0x10000 + (((cp - 0xD800) << 10) | (cp2 - 0xDC00));
-                                ptr += 6; 
+                                ptr += 6;
                             } else {
-                                status_ = core::JsonError::InvalidValue; return {};
+                                status_ = core::JsonError::InvalidValue;
+                                return {};
                             }
                         } else {
-                            status_ = core::JsonError::InvalidValue; return {};
+                            status_ = core::JsonError::InvalidValue;
+                            return {};
                         }
                     }
 
@@ -161,7 +184,8 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
                         *out++ = static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
                         *out++ = static_cast<char>(0x80 | (cp & 0x3F));
                     } else {
-                        status_ = core::JsonError::InvalidValue; return {};
+                        status_ = core::JsonError::InvalidValue;
+                        return {};
                     }
                     break;
                 }
@@ -181,7 +205,7 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
 
 Parser::JsonValue Parser::buildString() noexcept {
     std::string_view val = current_->value();
-    
+
     // Lazy Evaluation: Decode hanya jika terbukti ada karakter escape
     if (current_->has_escape_) {
         val = unescapeString(val);
@@ -189,7 +213,7 @@ Parser::JsonValue Parser::buildString() noexcept {
             return JsonValue::Null();
         }
     }
-    
+
     const auto index = res_.commitString(val);
     ++current_;
     return Parser::JsonValue::String(index);
@@ -252,7 +276,8 @@ Parser::JsonValue Parser::buildObject() noexcept {
         std::string_view key_val = current_->value();
         if (current_->has_escape_) {
             key_val = unescapeString(key_val);
-            if (has_error()) [[unlikely]] return JsonValue::Null();
+            if (has_error()) [[unlikely]]
+                return JsonValue::Null();
         }
 
         const auto key_index = res_.commitString(key_val);

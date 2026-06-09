@@ -5,6 +5,7 @@ UseTab: Never
 ColumnLimit: 100
 
 BreakBeforeBraces: Attach
+
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
@@ -34,3 +35,12 @@ FixNamespaceComments: true
 NamespaceIndentation: None
 
 RemoveBracesLLVM: false
+
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+AlwaysBreakTemplateDeclarations: Yes
+IndentWrappedFunctionNames: false
+PackConstructorInitializers: Never
+ConstructorInitializerIndentWidth: 4
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma

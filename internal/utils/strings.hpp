@@ -18,7 +18,7 @@ namespace zuu::utils {
 }
 
 [[nodiscard]] inline constexpr bool is_alphabet(char c) noexcept {
-    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'); 
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
 [[nodiscard]] inline constexpr bool is_whitespace(char c) noexcept {
