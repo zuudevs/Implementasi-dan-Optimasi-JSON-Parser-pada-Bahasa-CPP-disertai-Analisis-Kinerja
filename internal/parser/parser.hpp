@@ -34,7 +34,6 @@ class Parser {
     Parser(Resources resources) noexcept;
 
     [[nodiscard]] static Expected Parse(Resources resources) noexcept;
-    [[nodiscard]] Expected result() const noexcept;
     [[nodiscard]] Expected result() && noexcept;
     [[nodiscard]] bool has_error() const noexcept;
 

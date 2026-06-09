@@ -23,13 +23,6 @@ Parser::Expected Parser::Parse(Resources resources) noexcept {
     return Parser(resources).result();
 }
 
-Parser::Expected Parser::result() const noexcept {
-    if (has_error()) {
-        return std::unexpected{status_};
-    }
-    return res_;
-}
-
 Parser::Expected Parser::result() && noexcept {
     if (has_error()) {
         return std::unexpected{status_};

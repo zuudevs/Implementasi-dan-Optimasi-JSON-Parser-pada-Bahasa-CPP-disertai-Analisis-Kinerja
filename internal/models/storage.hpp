@@ -12,9 +12,10 @@
 
 #include "models/json_member.hpp"
 #include "models/token.hpp"
+#include <cstddef>
+#include <memory>
 #include <span>
 #include <string_view>
-#include <vector>
 
 namespace zuu::models {
 
@@ -25,11 +26,12 @@ class Storage {
     using JsonObject = std::span<const JsonMember>;
 
     Storage() noexcept = default;
-    Storage(const Storage&) noexcept = default;
+    Storage(const Storage&) = delete;
     Storage(Storage&&) noexcept = default;
-    Storage& operator=(const Storage&) noexcept = default;
+    Storage& operator=(const Storage&) = delete;
     Storage& operator=(Storage&&) noexcept = default;
     ~Storage() noexcept = default;
+
     Storage(models::Hint<Token> hint) noexcept;
 
     [[nodiscard]] bool hasRoot() const noexcept;
@@ -37,10 +39,8 @@ class Storage {
     [[nodiscard]] const JsonValue& root() const noexcept;
 
     [[nodiscard]] size_t commitString(std::string_view value) noexcept;
-    
-    [[nodiscard]] size_t commitArray(std::span<const JsonValue> elements) noexcept;
-    [[nodiscard]] size_t commitObject(std::span<const JsonMember> members) noexcept;
 
+    // Fast-path untuk Parser (Bump Allocation)
     [[nodiscard]] size_t getArrayOffset() const noexcept;
     void pushArrayElement(const JsonValue& val) noexcept;
     [[nodiscard]] size_t sealArray(size_t start_offset) noexcept;
@@ -54,11 +54,26 @@ class Storage {
     [[nodiscard]] std::string_view string(size_t index) const noexcept;
 
   private:
-    std::vector<std::string_view> strings_;
-    std::vector<JsonValue> array_elements_;
-    std::vector<std::pair<uint32_t, uint32_t>> arrays_;
-    std::vector<JsonMember> object_elements_;
-    std::vector<std::pair<uint32_t, uint32_t>> objects_;
+    // Memory Arena: Satu blok alokasi mentah untuk seluruh dokumen
+	// NOLINTNEXTLINE(modernize-avoid-c-arrays)
+    std::unique_ptr<std::byte[]> arena_;
+
+    // Pointers dan sizes untuk menggantikan overhead std::vector
+    std::string_view* strings_{nullptr};
+    uint32_t strings_size_{0};
+
+    JsonValue* array_elements_{nullptr};
+    uint32_t array_elements_size_{0};
+
+    std::pair<uint32_t, uint32_t>* arrays_{nullptr};
+    uint32_t arrays_size_{0};
+
+    JsonMember* object_elements_{nullptr};
+    uint32_t object_elements_size_{0};
+
+    std::pair<uint32_t, uint32_t>* objects_{nullptr};
+    uint32_t objects_size_{0};
+
     JsonValue root_{};
     bool root_set_{false};
 };
