@@ -129,7 +129,8 @@ void Tokenizer::readAlphabet() noexcept {
     switch (*current_) {
         case 'n': {
             constexpr auto size = sizeof("null") - 1;
-            if (current_ + size <= end_ && memcmp(current_ + 1, "ull", size - 1) == 0) {
+            constexpr auto size1 = size - 1;
+            if (current_ + size <= end_ && memcmp(current_ + 1, "ull", size1) == 0) {
                 res_.emplace_back(Token::Type::Null, std::string_view(current_, size));
                 current_ += size;
                 return;
@@ -138,9 +139,9 @@ void Tokenizer::readAlphabet() noexcept {
         }
         case 't': {
             constexpr auto size = sizeof("true") - 1;
-            if (current_ + size <= end_ && memcmp(current_ + 1, "rue", size - 1) == 0) {
+            constexpr auto size1 = size - 1;
+            if (current_ + size <= end_ && memcmp(current_ + 1, "rue", size1) == 0) {
                 res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
-
                 current_ += size;
                 return;
             }
@@ -148,9 +149,9 @@ void Tokenizer::readAlphabet() noexcept {
         }
         case 'f': {
             constexpr auto size = sizeof("false") - 1;
-            if (current_ + size <= end_ && memcmp(current_ + 1, "alse", size - 1) == 0) {
+            constexpr auto size1 = size - 1;
+            if (current_ + size <= end_ && memcmp(current_ + 1, "alse", size1) == 0) {
                 res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
-
                 current_ += size;
                 return;
             }
@@ -164,15 +165,17 @@ void Tokenizer::readAlphabet() noexcept {
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-		// NOLINENEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-        switch (*(constants::LUT_TOKEN + *current_)) {
+        // NOLINENEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        switch (constants::LUT_TOKEN[static_cast<unsigned char>(*current_)]) {
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
             case 0: {
                 // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
                 do {
                     ++current_;
-                } while (current_ < end_ &&
-                         constants::LUT_TOKEN[static_cast<unsigned char>(*current_)] == 0);
+                } while (
+					current_ < end_ && 
+					constants::LUT_TOKEN[static_cast<unsigned char>(*current_)] == 0
+				);
                 continue;
             }
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)

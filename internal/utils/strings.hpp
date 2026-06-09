@@ -13,7 +13,8 @@
 namespace zuu::utils {
 
 [[nodiscard]] inline constexpr bool is_numeric(char c) noexcept {
-    return c >= '0' && c <= '9';
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
+    return static_cast<unsigned>(c - '0') < 10;
 }
 
 [[nodiscard]] inline constexpr bool is_alphabet(char c) noexcept {
