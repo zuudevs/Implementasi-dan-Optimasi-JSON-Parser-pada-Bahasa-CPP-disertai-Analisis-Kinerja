@@ -37,8 +37,17 @@ class Storage {
     [[nodiscard]] const JsonValue& root() const noexcept;
 
     [[nodiscard]] size_t commitString(std::string_view value) noexcept;
+    
     [[nodiscard]] size_t commitArray(std::span<const JsonValue> elements) noexcept;
     [[nodiscard]] size_t commitObject(std::span<const JsonMember> members) noexcept;
+
+    [[nodiscard]] size_t getArrayOffset() const noexcept;
+    void pushArrayElement(const JsonValue& val) noexcept;
+    [[nodiscard]] size_t sealArray(size_t start_offset) noexcept;
+
+    [[nodiscard]] size_t getObjectOffset() const noexcept;
+    void pushObjectMember(const JsonMember& member) noexcept;
+    [[nodiscard]] size_t sealObject(size_t start_offset) noexcept;
 
     [[nodiscard]] JsonArray array(size_t index) const noexcept;
     [[nodiscard]] JsonObject object(size_t index) const noexcept;

@@ -69,4 +69,32 @@ std::string_view Storage::string(size_t index) const noexcept {
     return strings_[index];
 }
 
+size_t Storage::getArrayOffset() const noexcept {
+    return array_elements_.size();
+}
+
+void Storage::pushArrayElement(const JsonValue& val) noexcept {
+    array_elements_.push_back(val);
+}
+
+size_t Storage::sealArray(size_t start_offset) noexcept {
+    const auto size = static_cast<uint32_t>(array_elements_.size() - start_offset);
+    arrays_.emplace_back(static_cast<uint32_t>(start_offset), size);
+    return arrays_.size() - 1;
+}
+
+size_t Storage::getObjectOffset() const noexcept {
+    return object_elements_.size();
+}
+
+void Storage::pushObjectMember(const JsonMember& member) noexcept {
+    object_elements_.push_back(member);
+}
+
+size_t Storage::sealObject(size_t start_offset) noexcept {
+    const auto size = static_cast<uint32_t>(object_elements_.size() - start_offset);
+    objects_.emplace_back(static_cast<uint32_t>(start_offset), size);
+    return objects_.size() - 1;
+}
+
 } // namespace zuu::models

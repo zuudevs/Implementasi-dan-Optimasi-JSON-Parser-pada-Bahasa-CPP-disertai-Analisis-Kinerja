@@ -11,32 +11,11 @@
 #include "parser/parser.hpp"
 #include <charconv>
 
-namespace {
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-thread_local std::vector<zuu::models::JsonValue> s_array_stack;
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-thread_local std::vector<zuu::models::JsonMember> s_object_stack;
-} // namespace
-
 namespace zuu::parser {
 
 Parser::Parser(Resources resources) noexcept
     : res_(resources.second), current_(resources.first.data()),
       end_(resources.first.data() + resources.first.size()) {
-    s_array_stack.clear();
-    s_object_stack.clear();
-
-    const auto& meta = resources.second;
-    const size_t hint = meta.comma_count + meta.array_count + meta.object_count;
-
-    if (s_array_stack.capacity() < hint) {
-        s_array_stack.reserve(hint);
-    }
-
-    if (s_object_stack.capacity() < hint) {
-        s_object_stack.reserve(hint);
-    }
-
     parse();
 }
 
@@ -74,13 +53,27 @@ Parser::JsonValue Parser::buildBoolean() noexcept {
 }
 
 Parser::JsonValue Parser::buildInteger() noexcept {
-    long long value{};
     const auto view = current_->value();
-    auto [ptr, ec] = std::from_chars(view.data(), view.data() + view.size(), value);
-    if (ec != std::errc{} || ptr != view.data() + view.size()) {
-        status_ = core::JsonError::InvalidValue;
-        return Parser::JsonValue::Null();
+    const char* ptr = view.data();
+    const char* end = ptr + view.size();
+    
+    long long value = 0;
+    bool is_negative = false;
+
+    if (*ptr == '-') {
+        is_negative = true;
+        ++ptr;
     }
+
+    while (ptr < end) {
+        value = (value << 3) + (value << 1) + (*ptr - '0'); 
+        ++ptr;
+    }
+
+    if (is_negative) {
+        value = -value;
+    }
+
     ++current_;
     return Parser::JsonValue::Integer(value);
 }
@@ -109,10 +102,10 @@ Parser::JsonValue Parser::buildArray() noexcept {
 
     if (current_->type_ == TokenType::RightSquareBracket) {
         ++current_;
-        return JsonValue::Array(res_.commitArray(std::span<const JsonValue>{}));
+        return JsonValue::Array(res_.sealArray(res_.getArrayOffset()));
     }
 
-    const size_t start = s_array_stack.size();
+    const size_t start_offset = res_.getArrayOffset();
 
     while (true) {
         auto value = buildValue();
@@ -120,7 +113,7 @@ Parser::JsonValue Parser::buildArray() noexcept {
             return JsonValue::Null();
         }
 
-        s_array_stack.push_back(value);
+        res_.pushArrayElement(value);
 
         if (current_->type_ == TokenType::Comma) [[likely]] {
             ++current_;
@@ -133,12 +126,7 @@ Parser::JsonValue Parser::buildArray() noexcept {
 
         if (current_->type_ == TokenType::RightSquareBracket) [[likely]] {
             ++current_;
-            const size_t count = s_array_stack.size() - start;
-            auto span = std::span<const models::JsonValue>(s_array_stack.data() + start, count);
-            const auto idx = res_.commitArray(span);
-
-            s_array_stack.resize(start);
-            return models::JsonValue::Array(idx);
+            return models::JsonValue::Array(res_.sealArray(start_offset));
         }
 
         status_ = core::JsonError::MissingComma;
@@ -151,10 +139,10 @@ Parser::JsonValue Parser::buildObject() noexcept {
 
     if (current_->type_ == TokenType::RightCurlyBracket) {
         ++current_;
-        return JsonValue::Object(res_.commitObject(std::span<const JsonMember>()));
+        return JsonValue::Object(res_.sealObject(res_.getObjectOffset()));
     }
 
-    const size_t start = s_object_stack.size();
+    const size_t start_offset = res_.getObjectOffset();
 
     while (true) {
         if (current_->type_ != TokenType::String) [[unlikely]] {
@@ -176,7 +164,7 @@ Parser::JsonValue Parser::buildObject() noexcept {
             return JsonValue::Null();
         }
 
-        s_object_stack.push_back(JsonMember{.key_index_ = key_index, .value_ = value});
+        res_.pushObjectMember(JsonMember{.key_index_ = key_index, .value_ = value});
 
         if (current_->type_ == TokenType::Comma) [[likely]] {
             ++current_;
@@ -189,12 +177,7 @@ Parser::JsonValue Parser::buildObject() noexcept {
 
         if (current_->type_ == TokenType::RightCurlyBracket) [[likely]] {
             ++current_;
-            const size_t count = s_object_stack.size() - start;
-            auto span = std::span<const JsonMember>(s_object_stack.data() + start, count);
-            const auto idx = res_.commitObject(span);
-
-            s_object_stack.resize(start);
-            return JsonValue::Object(idx);
+            return JsonValue::Object(res_.sealObject(start_offset));
         }
 
         status_ = core::JsonError::MissingComma;
